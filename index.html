@@ -1,0 +1,1501 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surgical Patient Manager - Professional Edition</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Enhanced iPad and mobile optimizations */
+        .touch-friendly {
+            min-height: 44px;
+            min-width: 44px;
+        }
+        
+        @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        button, input, select, textarea {
+            min-height: 44px;
+        }
+        
+        /* Better touch targets for iPad */
+        @media (max-width: 1024px) {
+            .grid-cols-3 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .grid-cols-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .text-sm {
+                font-size: 0.95rem;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .grid-cols-2 {
+                grid-template-columns: repeat(1, 1fr);
+            }
+            .text-xs {
+                font-size: 0.8rem;
+            }
+        }
+        
+        /* Custom animations */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Better modal experience on touch devices */
+        .modal-overlay {
+            backdrop-filter: blur(4px);
+        }
+        
+        /* Improved form styling */
+        .form-input {
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        .form-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Comprehensive icon set
+        const Plus = ({ className = "w-4 h-4" }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>;
+        const User = ({ className = "w-4 h-4" }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>;
+        const Calendar = ({ className = "w-4 h-4" }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>;
+        const CheckCircle = ({ className = "w-5 h-5" }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>;
+        const AlertCircle = ({ className = "w-5 h-5" }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>;
+        const Edit2 = ({ className = "w-4 h-4" }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>;
+        const Save = ({ className = "w-4 h-4" }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>;
+        const Printer = ({ className = "w-4 h-4" }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>;
+        const Camera = ({ className = "w-8 h-8" }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>;
+        const Upload = ({ className = "w-4 h-4" }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>;
+        const Search = ({ className = "w-4 h-4" }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>;
+        const Users = ({ className = "w-4 h-4" }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path></svg>;
+        const X = ({ className = "w-4 h-4" }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>;
+
+        const SurgicalPatientManager = () => {
+            const [patients, setPatients] = useState([]);
+            const [activePatient, setActivePatient] = useState(null);
+            const [activeTab, setActiveTab] = useState('overview');
+            const [searchTerm, setSearchTerm] = useState('');
+            const [isEditing, setIsEditing] = useState(false);
+            const [currentUser, setCurrentUser] = useState({
+                name: 'Dr. Smith',
+                role: 'attending_surgeon',
+                id: 'user_001'
+            });
+            const [printModal, setPrintModal] = useState({ show: false, content: '', title: '' });
+
+            // Role permissions system
+            const rolePermissions = {
+                attending_surgeon: {
+                    name: 'Attending Surgeon',
+                    icon: '👨‍⚕️',
+                    color: 'bg-blue-600 text-white',
+                    canEdit: true,
+                    canPrescribe: true,
+                    canDischarge: true
+                },
+                resident: {
+                    name: 'Resident',
+                    icon: '👩‍⚕️',
+                    color: 'bg-green-600 text-white',
+                    canEdit: true,
+                    canPrescribe: true,
+                    canDischarge: false
+                },
+                nurse: {
+                    name: 'Nurse',
+                    icon: '👩‍⚕️',
+                    color: 'bg-purple-600 text-white',
+                    canEdit: false,
+                    canPrescribe: false,
+                    canDischarge: false
+                }
+            };
+
+            // Lab reference ranges
+            const labReferenceRanges = {
+                cbc: {
+                    name: 'Complete Blood Count',
+                    values: {
+                        wbc: { name: 'WBC', range: '4.5-11.0', unit: 'K/µL', critical: { low: 3.0, high: 15.0 } },
+                        hgb: { name: 'Hemoglobin', range: '12.0-16.0', unit: 'g/dL', critical: { low: 8.0, high: 18.0 } },
+                        hct: { name: 'Hematocrit', range: '36-46', unit: '%', critical: { low: 25, high: 55 } },
+                        plt: { name: 'Platelets', range: '150-450', unit: 'K/µL', critical: { low: 50, high: 1000 } }
+                    }
+                },
+                cmp: {
+                    name: 'Comprehensive Metabolic Panel',
+                    values: {
+                        glucose: { name: 'Glucose', range: '70-100', unit: 'mg/dL', critical: { low: 40, high: 400 } },
+                        bun: { name: 'BUN', range: '7-20', unit: 'mg/dL', critical: { low: 2, high: 80 } },
+                        creatinine: { name: 'Creatinine', range: '0.6-1.2', unit: 'mg/dL', critical: { low: 0.3, high: 5.0 } },
+                        sodium: { name: 'Sodium', range: '136-145', unit: 'mEq/L', critical: { low: 120, high: 160 } },
+                        potassium: { name: 'Potassium', range: '3.5-5.1', unit: 'mEq/L', critical: { low: 2.5, high: 6.5 } }
+                    }
+                }
+            };
+
+            // Medication database
+            const medicationDatabase = {
+                cefazolin: {
+                    name: 'Cefazolin',
+                    standardDose: 1,
+                    unit: 'g',
+                    weightBased: 15,
+                    weightUnit: 'mg/kg',
+                    maxDose: 2000,
+                    contraindications: ['penicillin allergy', 'cephalosporin allergy']
+                },
+                morphine: {
+                    name: 'Morphine',
+                    standardDose: 2,
+                    unit: 'mg',
+                    weightBased: 0.05,
+                    weightUnit: 'mg/kg',
+                    maxDose: 10,
+                    contraindications: ['morphine allergy', 'respiratory depression']
+                }
+            };
+
+            // Initialize with sample data
+            useEffect(() => {
+                const samplePatients = [
+                    {
+                        id: 1,
+                        name: 'John Anderson',
+                        age: 45,
+                        mrn: 'MRN001234',
+                        procedure: 'Laparoscopic Cholecystectomy',
+                        surgeryDate: '2025-07-25',
+                        status: 'pre-op',
+                        preOpComplete: 75,
+                        demographics: {
+                            dob: '1979-03-15',
+                            gender: 'Male',
+                            phone: '(555) 123-4567',
+                            address: '123 Main St, City, State 12345',
+                            weight: 75,
+                            height: 175,
+                            allergies: ['NKDA']
+                        },
+                        preOpChecklist: {
+                            medicalHistory: { completed: true, notes: 'HTN, controlled with medication', images: [] },
+                            allergies: { completed: true, notes: 'NKDA', images: [] },
+                            medications: { completed: true, notes: 'Lisinopril 10mg daily', images: [] },
+                            labResults: { 
+                                completed: true, 
+                                notes: 'CBC, CMP, PT/PTT - all normal', 
+                                images: [],
+                                labs: {
+                                    cbc: { 
+                                        date: '2025-07-18', 
+                                        values: { wbc: 7.2, hgb: 13.5, hct: 40.2, plt: 250 }, 
+                                        critical: false 
+                                    },
+                                    cmp: { 
+                                        date: '2025-07-18', 
+                                        values: { glucose: 95, bun: 18, creatinine: 1.0, sodium: 140, potassium: 4.2 }, 
+                                        critical: false 
+                                    }
+                                }
+                            },
+                            imaging: { completed: false, notes: 'US abdomen pending', images: [] },
+                            consent: { completed: true, notes: 'Informed consent signed', images: [] },
+                            anesthesia: { completed: false, notes: 'Anesthesia consult pending', images: [] },
+                            antibiotics: { completed: true, notes: 'Cefazolin 1g IV scheduled', images: [] },
+                            npoStatus: { completed: true, notes: 'NPO after midnight', images: [] },
+                            preOpEducation: { completed: false, notes: 'Patient education materials given', images: [] }
+                        },
+                        surgicalNotes: {
+                            procedure: '',
+                            findings: '',
+                            complications: '',
+                            surgeon: '',
+                            assistant: '',
+                            anesthesia: '',
+                            duration: '',
+                            bloodLoss: '',
+                            specimens: '',
+                            images: []
+                        },
+                        postOpCare: {
+                            vitals: '',
+                            pain: '',
+                            nausea: '',
+                            mobility: '',
+                            diet: '',
+                            medications: '',
+                            drains: '',
+                            wounds: ''
+                        },
+                        discharge: {
+                            instructions: '',
+                            medications: '',
+                            followUp: '',
+                            restrictions: '',
+                            warnings: ''
+                        },
+                        teamNotes: [
+                            { user: 'Dr. Smith', userRole: 'attending_surgeon', time: '2025-07-19 09:30', note: 'Patient evaluated, cleared for surgery' }
+                        ]
+                    }
+                ];
+                setPatients(samplePatients);
+            }, []);
+
+            // Utility functions
+            const canPerform = (action) => {
+                const permissions = rolePermissions[currentUser.role];
+                switch(action) {
+                    case 'edit': return permissions?.canEdit || false;
+                    case 'prescribe': return permissions?.canPrescribe || false;
+                    case 'discharge': return permissions?.canDischarge || false;
+                    default: return false;
+                }
+            };
+
+            const calculateDose = (medicationKey, patientWeight) => {
+                const med = medicationDatabase[medicationKey];
+                if (!med || !patientWeight) return null;
+                
+                const calculatedDose = med.weightBased * patientWeight;
+                const finalDose = Math.min(calculatedDose, med.maxDose);
+                
+                return {
+                    medication: med.name,
+                    dose: finalDose,
+                    unit: med.unit,
+                    calculation: `${med.weightBased} ${med.weightUnit} × ${patientWeight}kg = ${finalDose.toFixed(1)} ${med.unit}`,
+                    isMaxDose: finalDose === med.maxDose
+                };
+            };
+
+            const isValueCritical = (labType, valueName, value) => {
+                const ref = labReferenceRanges[labType]?.values[valueName];
+                if (!ref || !value) return false;
+                return value < ref.critical.low || value > ref.critical.high;
+            };
+
+            const isValueAbnormal = (labType, valueName, value) => {
+                const ref = labReferenceRanges[labType]?.values[valueName];
+                if (!ref || !value) return false;
+                const [low, high] = ref.range.split('-').map(Number);
+                return value < low || value > high;
+            };
+
+            // Patient management functions
+            const addNewPatient = () => {
+                const newPatient = {
+                    id: Date.now(),
+                    name: 'New Patient',
+                    age: '',
+                    mrn: '',
+                    procedure: '',
+                    surgeryDate: '',
+                    status: 'pre-op',
+                    preOpComplete: 0,
+                    demographics: {
+                        dob: '',
+                        gender: '',
+                        phone: '',
+                        address: '',
+                        weight: '',
+                        height: '',
+                        allergies: []
+                    },
+                    preOpChecklist: {
+                        medicalHistory: { completed: false, notes: '', images: [] },
+                        allergies: { completed: false, notes: '', images: [] },
+                        medications: { completed: false, notes: '', images: [] },
+                        labResults: { completed: false, notes: '', images: [], labs: {} },
+                        imaging: { completed: false, notes: '', images: [] },
+                        consent: { completed: false, notes: '', images: [] },
+                        anesthesia: { completed: false, notes: '', images: [] },
+                        antibiotics: { completed: false, notes: '', images: [] },
+                        npoStatus: { completed: false, notes: '', images: [] },
+                        preOpEducation: { completed: false, notes: '', images: [] }
+                    },
+                    surgicalNotes: {
+                        procedure: '',
+                        findings: '',
+                        complications: '',
+                        surgeon: '',
+                        assistant: '',
+                        anesthesia: '',
+                        duration: '',
+                        bloodLoss: '',
+                        specimens: '',
+                        images: []
+                    },
+                    postOpCare: {
+                        vitals: '',
+                        pain: '',
+                        nausea: '',
+                        mobility: '',
+                        diet: '',
+                        medications: '',
+                        drains: '',
+                        wounds: ''
+                    },
+                    discharge: {
+                        instructions: '',
+                        medications: '',
+                        followUp: '',
+                        restrictions: '',
+                        warnings: ''
+                    },
+                    teamNotes: []
+                };
+                setPatients([...patients, newPatient]);
+                setActivePatient(newPatient);
+                setIsEditing(true);
+            };
+
+            const updatePatient = (updatedData) => {
+                const updated = { ...activePatient, ...updatedData };
+                setPatients(patients.map(p => 
+                    p.id === activePatient.id ? updated : p
+                ));
+                setActivePatient(updated);
+            };
+
+            const updatePreOpChecklist = (item, field, value) => {
+                const updated = {
+                    ...activePatient,
+                    preOpChecklist: {
+                        ...activePatient.preOpChecklist,
+                        [item]: {
+                            ...activePatient.preOpChecklist[item],
+                            [field]: value
+                        }
+                    }
+                };
+                
+                // Calculate completion percentage
+                const total = Object.keys(updated.preOpChecklist).length;
+                const completed = Object.values(updated.preOpChecklist).filter(item => item.completed).length;
+                updated.preOpComplete = Math.round((completed / total) * 100);
+                
+                updatePatient(updated);
+            };
+
+            const addTeamNote = (note) => {
+                const newNote = {
+                    user: currentUser.name,
+                    userRole: currentUser.role,
+                    time: new Date().toLocaleString(),
+                    note: note
+                };
+                updatePatient({
+                    teamNotes: [newNote, ...activePatient.teamNotes]
+                });
+            };
+
+            const addLabResult = (labType, values) => {
+                const hasCriticalValues = Object.entries(values).some(([key, value]) => 
+                    isValueCritical(labType, key, value)
+                );
+                
+                const updatedLabs = {
+                    ...activePatient.preOpChecklist.labResults.labs,
+                    [labType]: {
+                        date: new Date().toISOString().split('T')[0],
+                        values: values,
+                        critical: hasCriticalValues,
+                        addedBy: currentUser.name,
+                        addedAt: new Date().toLocaleString()
+                    }
+                };
+                
+                updatePreOpChecklist('labResults', 'labs', updatedLabs);
+            };
+
+            // Print functionality
+            const generatePrintContent = (templateType) => {
+                const patient = activePatient;
+                const hospitalName = "Metropolitan Surgical Center";
+                const printDate = new Date().toLocaleDateString();
+                const printTime = new Date().toLocaleTimeString();
+
+                const commonHeader = `
+                    <div style="border-bottom: 2px solid #2563eb; padding-bottom: 1rem; margin-bottom: 2rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h1 style="color: #2563eb; margin: 0; font-size: 1.5rem;">${hospitalName}</h1>
+                                <p style="margin: 0; color: #6b7280;">Surgical Services Department</p>
+                            </div>
+                            <div style="text-align: right;">
+                                <p style="margin: 0; font-size: 0.875rem; color: #6b7280;">Printed: ${printDate} ${printTime}</p>
+                                <p style="margin: 0; font-size: 0.875rem; color: #6b7280;">By: ${currentUser.name}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: #f3f4f6; padding: 1rem; border-radius: 0.5rem; margin-bottom: 2rem;">
+                        <h2 style="margin: 0 0 0.5rem 0; color: #374151;">Patient Information</h2>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                            <div><strong>Name:</strong> ${patient.name}</div>
+                            <div><strong>MRN:</strong> ${patient.mrn}</div>
+                            <div><strong>Age:</strong> ${patient.age}</div>
+                            <div><strong>DOB:</strong> ${patient.demographics.dob}</div>
+                            <div><strong>Weight:</strong> ${patient.demographics.weight} kg</div>
+                            <div><strong>Surgery Date:</strong> ${patient.surgeryDate}</div>
+                        </div>
+                        <div style="margin-top: 0.5rem;"><strong>Procedure:</strong> ${patient.procedure}</div>
+                        <div><strong>Allergies:</strong> ${patient.demographics.allergies?.join(', ') || 'NKDA'}</div>
+                    </div>
+                `;
+
+                if (templateType === 'preOpChecklist') {
+                    const checklistItems = Object.entries(patient.preOpChecklist).map(([key, item]) => {
+                        const labels = {
+                            medicalHistory: 'Medical History',
+                            allergies: 'Allergies',
+                            medications: 'Current Medications',
+                            labResults: 'Laboratory Results',
+                            imaging: 'Imaging Studies',
+                            consent: 'Informed Consent',
+                            anesthesia: 'Anesthesia Clearance',
+                            antibiotics: 'Prophylactic Antibiotics',
+                            npoStatus: 'NPO Status',
+                            preOpEducation: 'Patient Education'
+                        };
+
+                        return `
+                            <tr style="border-bottom: 1px solid #e5e7eb;">
+                                <td style="padding: 0.75rem; width: 2rem;">
+                                    <span style="font-size: 1.25rem;">${item.completed ? '✅' : '❌'}</span>
+                                </td>
+                                <td style="padding: 0.75rem; font-weight: 500;">${labels[key]}</td>
+                                <td style="padding: 0.75rem; color: #6b7280;">${item.notes || 'No notes'}</td>
+                                <td style="padding: 0.75rem; text-align: center; color: #6b7280;">
+                                    ${item.images?.length || 0} images
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+
+                    return commonHeader + `
+                        <h2 style="color: #374151; border-bottom: 1px solid #d1d5db; padding-bottom: 0.5rem;">Pre-operative Checklist</h2>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Completion Status:</strong> ${patient.preOpComplete}% complete
+                        </div>
+                        <table style="width: 100%; border-collapse: collapse; border: 1px solid #d1d5db;">
+                            <thead style="background: #f9fafb;">
+                                <tr>
+                                    <th style="padding: 0.75rem; text-align: left;">Status</th>
+                                    <th style="padding: 0.75rem; text-align: left;">Item</th>
+                                    <th style="padding: 0.75rem; text-align: left;">Notes</th>
+                                    <th style="padding: 0.75rem; text-align: center;">Images</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${checklistItems}
+                            </tbody>
+                        </table>
+                    `;
+                }
+
+                return commonHeader + '<p>Print template not found</p>';
+            };
+
+            const handlePrint = (templateType = 'preOpChecklist') => {
+                const content = generatePrintContent(templateType);
+                setPrintModal({ show: true, content, title: templateType });
+            };
+
+            const executePrint = () => {
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                        <head>
+                            <title>Patient Chart - ${activePatient.name}</title>
+                            <style>
+                                body { 
+                                    font-family: Arial, sans-serif; 
+                                    line-height: 1.4; 
+                                    margin: 1rem; 
+                                    color: #111827;
+                                }
+                                @media print {
+                                    body { margin: 0; }
+                                    .no-print { display: none; }
+                                }
+                                table { border-collapse: collapse; width: 100%; }
+                                th, td { border: 1px solid #d1d5db; padding: 0.5rem; text-align: left; }
+                                th { background-color: #f9fafb; font-weight: 600; }
+                            </style>
+                        </head>
+                        <body>
+                            ${printModal.content}
+                            <div class="no-print" style="margin-top: 2rem; text-align: center;">
+                                <button onclick="window.print()" style="background: #2563eb; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.375rem; cursor: pointer; margin-right: 0.5rem;">Print</button>
+                                <button onclick="window.close()" style="background: #6b7280; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.375rem; cursor: pointer;">Close</button>
+                            </div>
+
+                        </body>
+                    </html>
+                `);
+                printWindow.document.close();
+                setPrintModal({ show: false, content: '', title: '' });
+            };
+
+            // Image handling functions
+            const handleImageUpload = (section, item = null) => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.multiple = true;
+                
+                input.onchange = (e) => {
+                    const files = Array.from(e.target.files);
+                    files.forEach(file => {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const imageData = {
+                                id: Date.now() + Math.random(),
+                                name: file.name,
+                                src: event.target.result,
+                                uploadedBy: currentUser.name,
+                                uploadedAt: new Date().toLocaleString(),
+                                type: file.type,
+                                size: file.size
+                            };
+                            
+                            if (section === 'preOp' && item) {
+                                const updated = {
+                                    ...activePatient,
+                                    preOpChecklist: {
+                                        ...activePatient.preOpChecklist,
+                                        [item]: {
+                                            ...activePatient.preOpChecklist[item],
+                                            images: [...(activePatient.preOpChecklist[item].images || []), imageData]
+                                        }
+                                    }
+                                };
+                                updatePatient(updated);
+                            } else if (section === 'surgical') {
+                                const updated = {
+                                    ...activePatient,
+                                    surgicalNotes: {
+                                        ...activePatient.surgicalNotes,
+                                        images: [...(activePatient.surgicalNotes.images || []), imageData]
+                                    }
+                                };
+                                updatePatient(updated);
+                            }
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                };
+                
+                input.click();
+            };
+
+            // Filter patients
+            const filteredPatients = patients.filter(p =>
+                p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                p.mrn.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                p.procedure.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            const getStatusColor = (status) => {
+                switch (status) {
+                    case 'pre-op': return 'bg-blue-100 text-blue-800';
+                    case 'in-surgery': return 'bg-yellow-100 text-yellow-800';
+                    case 'post-op': return 'bg-green-100 text-green-800';
+                    case 'discharged': return 'bg-gray-100 text-gray-800';
+                    default: return 'bg-gray-100 text-gray-800';
+                }
+            };
+
+            // Components
+            const ImageGallery = ({ images = [], section, item = null, title = "Images" }) => {
+                if (!images.length && (!isEditing || !canPerform('edit'))) return null;
+                
+                return (
+                    <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-medium text-gray-700 flex items-center">
+                                📷 {title} ({images.length})
+                            </h4>
+                            {isEditing && canPerform('edit') && (
+                                <button
+                                    onClick={() => handleImageUpload(section, item)}
+                                    className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 text-sm touch-friendly"
+                                >
+                                    <Upload className="w-4 h-4" />
+                                    <span>Add Images</span>
+                                </button>
+                            )}
+                        </div>
+                        
+                        {images.length > 0 && (
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {images.map((image) => (
+                                    <div key={image.id} className="relative group">
+                                        <div className="aspect-square bg-white rounded-lg border shadow-sm overflow-hidden">
+                                            <img
+                                                src={image.src}
+                                                alt={image.name}
+                                                className="w-full h-full object-cover cursor-pointer hover:opacity-75 transition-opacity"
+                                                onClick={() => alert(`Image: ${image.name}\nUploaded by: ${image.uploadedBy}\nDate: ${image.uploadedAt}`)}
+                                            />
+                                        </div>
+                                        <div className="mt-1 text-xs text-gray-500 truncate">
+                                            {image.name}
+                                        </div>
+                                        <div className="text-xs text-gray-400">
+                                            by {image.uploadedBy}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        
+                        {images.length === 0 && isEditing && canPerform('edit') && (
+                            <div 
+                                onClick={() => handleImageUpload(section, item)}
+                                className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                            >
+                                <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                                <p className="text-sm text-gray-500">Click to add images</p>
+                                <p className="text-xs text-gray-400">JPG, PNG, or other image formats</p>
+                            </div>
+                        )}
+                    </div>
+                );
+            };
+
+            const LabResultsComponent = ({ labData = {} }) => {
+                const [selectedLabType, setSelectedLabType] = useState('');
+                const [labValues, setLabValues] = useState({});
+                const [showLabModal, setShowLabModal] = useState(false);
+
+                const handleAddLabClick = (labType) => {
+                    setSelectedLabType(labType);
+                    const initialValues = {};
+                    Object.keys(labReferenceRanges[labType].values).forEach(key => {
+                        initialValues[key] = '';
+                    });
+                    setLabValues(initialValues);
+                    setShowLabModal(true);
+                };
+
+                const handleLabSubmit = () => {
+                    const numericValues = {};
+                    Object.entries(labValues).forEach(([key, value]) => {
+                        numericValues[key] = value ? parseFloat(value) : null;
+                    });
+                    addLabResult(selectedLabType, numericValues);
+                    setShowLabModal(false);
+                };
+
+                return (
+                    <div className="space-y-6">
+                        {canPerform('edit') && isEditing && (
+                            <div className="flex flex-wrap gap-2 mb-4">
+                                {Object.entries(labReferenceRanges).map(([key, lab]) => (
+                                    <button
+                                        key={key}
+                                        onClick={() => handleAddLabClick(key)}
+                                        className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center space-x-2 touch-friendly"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        <span>Add {lab.name}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        {Object.entries(labData).map(([labType, result]) => {
+                            const labInfo = labReferenceRanges[labType];
+                            if (!labInfo || !result.values) return null;
+
+                            return (
+                                <div key={labType} className="border rounded-lg p-4 bg-white shadow-sm">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h4 className="font-semibold text-gray-900 flex items-center">
+                                            {labInfo.name}
+                                            {result.critical && (
+                                                <AlertCircle className="w-5 h-5 text-red-500 ml-2" />
+                                            )}
+                                        </h4>
+                                        <div className="text-sm text-gray-500">
+                                            {result.date} • by {result.addedBy}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {Object.entries(result.values).map(([valueName, value]) => {
+                                            const ref = labInfo.values[valueName];
+                                            const isCritical = isValueCritical(labType, valueName, value);
+                                            const isAbnormal = isValueAbnormal(labType, valueName, value);
+                                            
+                                            return (
+                                                <div key={valueName} className="bg-gray-50 rounded-lg p-3">
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <span className="text-sm font-medium text-gray-700">{ref.name}</span>
+                                                        {isCritical && <AlertCircle className="w-4 h-4 text-red-500" />}
+                                                    </div>
+                                                    <div className={`text-lg font-semibold ${
+                                                        isCritical ? 'text-red-600' : isAbnormal ? 'text-yellow-600' : 'text-green-600'
+                                                    }`}>
+                                                        {value !== null ? value : 'N/A'} {ref.unit}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">
+                                                        Normal: {ref.range} {ref.unit}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        {showLabModal && selectedLabType && (
+                            <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4 modal-overlay">
+                                <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-96 overflow-y-auto">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-lg font-semibold">
+                                            Add {labReferenceRanges[selectedLabType].name}
+                                        </h3>
+                                        <button
+                                            onClick={() => setShowLabModal(false)}
+                                            className="p-2 hover:bg-gray-100 rounded-full touch-friendly"
+                                        >
+                                            <X className="w-5 h-5" />
+                                        </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                        {Object.entries(labReferenceRanges[selectedLabType].values).map(([key, ref]) => (
+                                            <div key={key}>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    {ref.name} ({ref.unit})
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    value={labValues[key] || ''}
+                                                    onChange={(e) => setLabValues({...labValues, [key]: e.target.value})}
+                                                    placeholder={`Normal: ${ref.range}`}
+                                                    className="w-full p-3 border rounded-md text-sm form-input touch-friendly"
+                                                />
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    Normal range: {ref.range} {ref.unit}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="flex justify-end space-x-3">
+                                        <button
+                                            onClick={() => setShowLabModal(false)}
+                                            className="px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg touch-friendly"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleLabSubmit}
+                                            className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 touch-friendly"
+                                        >
+                                            Add Lab Results
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            };
+
+            const MedicationCalculatorComponent = () => {
+                const [calculations, setCalculations] = useState({});
+                
+                const patientWeight = parseFloat(activePatient.demographics.weight) || 70;
+                const patientAge = activePatient.demographics.dob ? 
+                    new Date().getFullYear() - new Date(activePatient.demographics.dob).getFullYear() : 45;
+
+                const handleCalculate = (medicationKey) => {
+                    const calculation = calculateDose(medicationKey, patientWeight);
+                    if (calculation) {
+                        setCalculations({
+                            ...calculations,
+                            [medicationKey]: {
+                                ...calculation,
+                                calculatedAt: new Date().toLocaleString(),
+                                patientWeight
+                            }
+                        });
+                    }
+                };
+
+                const hasAllergies = (medication) => {
+                    const patientAllergies = activePatient.demographics.allergies || [];
+                    return medication.contraindications.some(contra => 
+                        patientAllergies.some(allergy => 
+                            allergy.toLowerCase().includes(contra.toLowerCase()) || 
+                            contra.toLowerCase().includes(allergy.toLowerCase())
+                        )
+                    );
+                };
+
+                return (
+                    <div className="space-y-6">
+                        <div className="bg-blue-50 rounded-lg p-4">
+                            <h4 className="font-semibold text-blue-900 mb-2">Patient Parameters</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                                <div>
+                                    <span className="text-blue-700">Weight:</span> {patientWeight} kg
+                                </div>
+                                <div>
+                                    <span className="text-blue-700">Age:</span> {patientAge} years
+                                </div>
+                                <div>
+                                    <span className="text-blue-700">Allergies:</span> {activePatient.demographics.allergies?.join(', ') || 'None'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {Object.entries(medicationDatabase).map(([medKey, medication]) => {
+                                const hasContraindication = hasAllergies(medication);
+                                const existingCalc = calculations[medKey];
+                                
+                                return (
+                                    <div key={medKey} className="border rounded-lg p-4 bg-white shadow-sm">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="font-medium text-lg">{medication.name}</span>
+                                            {hasContraindication && (
+                                                <AlertCircle className="w-5 h-5 text-red-500" title="Contraindicated" />
+                                            )}
+                                        </div>
+                                        
+                                        {existingCalc ? (
+                                            <div className="space-y-2">
+                                                <div className="bg-green-50 rounded p-3">
+                                                    <div className="font-semibold text-green-800 text-lg">
+                                                        {existingCalc.dose} {existingCalc.unit}
+                                                    </div>
+                                                    <div className="text-sm text-green-600">
+                                                        {existingCalc.calculation}
+                                                    </div>
+                                                </div>
+                                                
+                                                {existingCalc.isMaxDose && (
+                                                    <div className="bg-yellow-50 rounded p-2">
+                                                        <div className="text-sm text-yellow-700 flex items-center">
+                                                            <AlertCircle className="w-4 h-4 mr-1" />
+                                                            Maximum dose reached
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                
+                                                <div className="text-xs text-gray-500">
+                                                    Calculated: {existingCalc.calculatedAt}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => handleCalculate(medKey)}
+                                                disabled={hasContraindication}
+                                                className={`w-full py-3 px-4 rounded text-sm font-medium touch-friendly ${
+                                                    hasContraindication 
+                                                        ? 'bg-red-100 text-red-600 cursor-not-allowed'
+                                                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                                                }`}
+                                            >
+                                                {hasContraindication ? 'Contraindicated' : 'Calculate Dose'}
+                                            </button>
+                                        )}
+                                        
+                                        {hasContraindication && (
+                                            <div className="mt-2 text-xs text-red-600">
+                                                Patient allergies: {activePatient.demographics.allergies?.join(', ') || 'None listed'}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            };
+
+            const PreOpChecklistComponent = () => {
+                const items = [
+                    { key: 'medicalHistory', label: 'Medical History' },
+                    { key: 'allergies', label: 'Allergies' },
+                    { key: 'medications', label: 'Current Medications' },
+                    { key: 'labResults', label: 'Lab Results' },
+                    { key: 'imaging', label: 'Imaging Studies' },
+                    { key: 'consent', label: 'Informed Consent' },
+                    { key: 'anesthesia', label: 'Anesthesia Clearance' },
+                    { key: 'antibiotics', label: 'Prophylactic Antibiotics' },
+                    { key: 'npoStatus', label: 'NPO Status' },
+                    { key: 'preOpEducation', label: 'Patient Education' }
+                ];
+
+                return (
+                    <div className="space-y-4">
+                        {items.map(item => (
+                            <div key={item.key} className="border rounded-lg p-4 bg-white shadow-sm fade-in">
+                                <div className="flex items-center justify-between mb-3">
+                                    <label className="flex items-center space-x-3">
+                                        <input
+                                            type="checkbox"
+                                            checked={activePatient.preOpChecklist[item.key]?.completed || false}
+                                            onChange={(e) => updatePreOpChecklist(item.key, 'completed', e.target.checked)}
+                                            className="w-6 h-6 text-blue-600 rounded touch-friendly"
+                                        />
+                                        <span className="font-medium text-gray-900 text-lg">{item.label}</span>
+                                    </label>
+                                    {activePatient.preOpChecklist[item.key]?.completed && 
+                                        <CheckCircle className="w-6 h-6 text-green-500" />
+                                    }
+                                </div>
+                                
+                                <textarea
+                                    value={activePatient.preOpChecklist[item.key]?.notes || ''}
+                                    onChange={(e) => updatePreOpChecklist(item.key, 'notes', e.target.value)}
+                                    placeholder="Enter notes..."
+                                    className="w-full p-3 border rounded-md text-sm form-input touch-friendly"
+                                    rows="3"
+                                />
+
+                                {item.key === 'labResults' && (
+                                    <div className="mt-4">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h5 className="font-medium text-gray-700">Laboratory Results</h5>
+                                            <button
+                                                onClick={() => handlePrint('labResults')}
+                                                className="flex items-center space-x-1 text-green-600 hover:text-green-800 text-sm touch-friendly"
+                                            >
+                                                <Printer className="w-4 h-4" />
+                                                <span>Print Labs</span>
+                                            </button>
+                                        </div>
+                                        <LabResultsComponent 
+                                            labData={activePatient.preOpChecklist.labResults.labs || {}}
+                                        />
+                                    </div>
+                                )}
+
+                                {item.key === 'antibiotics' && (
+                                    <div className="mt-4">
+                                        <h5 className="font-medium text-gray-700 mb-3">Dosage Calculator</h5>
+                                        <MedicationCalculatorComponent />
+                                    </div>
+                                )}
+                                
+                                <ImageGallery 
+                                    images={activePatient.preOpChecklist[item.key]?.images || []}
+                                    section="preOp"
+                                    item={item.key}
+                                    title={`${item.label} Images`}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                );
+            };
+
+            const UserSwitcher = () => {
+                const [showMenu, setShowMenu] = useState(false);
+                const teamMembers = [
+                    { name: 'Dr. Smith', role: 'attending_surgeon', id: 'user_001' },
+                    { name: 'Dr. Johnson', role: 'resident', id: 'user_002' },
+                    { name: 'Sarah Williams, RN', role: 'nurse', id: 'user_003' }
+                ];
+
+                const switchUser = (newUser) => {
+                    setCurrentUser(newUser);
+                    setShowMenu(false);
+                };
+
+                return (
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowMenu(!showMenu)}
+                            className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm touch-friendly ${rolePermissions[currentUser.role].color}`}
+                        >
+                            <span>{rolePermissions[currentUser.role].icon}</span>
+                            <div className="text-left">
+                                <div className="font-medium">{currentUser.name}</div>
+                                <div className="text-xs opacity-90">{rolePermissions[currentUser.role].name}</div>
+                            </div>
+                        </button>
+
+                        {showMenu && (
+                            <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-lg shadow-lg border z-50">
+                                <div className="p-3 border-b">
+                                    <h4 className="font-semibold text-gray-900">Switch User</h4>
+                                    <p className="text-xs text-gray-500">Select a team member to view as</p>
+                                </div>
+                                <div className="max-h-64 overflow-y-auto">
+                                    {teamMembers.map((member) => (
+                                        <button
+                                            key={member.id}
+                                            onClick={() => switchUser(member)}
+                                            className={`w-full text-left p-3 hover:bg-gray-50 flex items-center space-x-3 touch-friendly ${
+                                                currentUser.id === member.id ? 'bg-blue-50' : ''
+                                            }`}
+                                        >
+                                            <span className="text-lg">{rolePermissions[member.role].icon}</span>
+                                            <div>
+                                                <div className="font-medium text-gray-900">{member.name}</div>
+                                                <div className="text-sm text-gray-500">{rolePermissions[member.role].name}</div>
+                                            </div>
+                                            {currentUser.id === member.id && (
+                                                <CheckCircle className="w-4 h-4 text-blue-600 ml-auto" />
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            };
+
+            // Main App Component
+            if (!activePatient) {
+                return (
+                    <div className="min-h-screen bg-gray-50">
+                        <div className="bg-white shadow-sm border-b">
+                            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                                <div className="flex justify-between items-center py-4">
+                                    <h1 className="text-2xl font-bold text-gray-900">Surgical Patient Manager</h1>
+                                    <div className="flex items-center space-x-4">
+                                        <button
+                                            onClick={addNewPatient}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg flex items-center space-x-2 touch-friendly"
+                                        >
+                                            <Plus />
+                                            <span>New Patient</span>
+                                        </button>
+                                        <UserSwitcher />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                            <div className="mb-6">
+                                <div className="relative">
+                                    <Search className="w-5 h-5 absolute left-3 top-3 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search patients..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 form-input touch-friendly"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {filteredPatients.map(patient => (
+                                    <div
+                                        key={patient.id}
+                                        onClick={() => setActivePatient(patient)}
+                                        className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer touch-friendly fade-in"
+                                    >
+                                        <div className="p-6">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center space-x-3">
+                                                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                                        <User className="w-6 h-6 text-blue-600" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-semibold text-gray-900">{patient.name}</h3>
+                                                        <p className="text-sm text-gray-500">MRN: {patient.mrn}</p>
+                                                    </div>
+                                                </div>
+                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(patient.status)}`}>
+                                                    {patient.status}
+                                                </span>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <p className="text-sm text-gray-600">{patient.procedure}</p>
+                                                <div className="flex items-center space-x-2 text-sm text-gray-500">
+                                                    <Calendar className="w-4 h-4" />
+                                                    <span>{patient.surgeryDate}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-4">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <span className="text-sm font-medium text-gray-700">Pre-op Complete</span>
+                                                    <span className="text-sm text-gray-500">{patient.preOpComplete}%</span>
+                                                </div>
+                                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                                    <div
+                                                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                                        style={{ width: `${patient.preOpComplete}%` }}
+                                                    ></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {filteredPatients.length === 0 && (
+                                <div className="text-center py-12">
+                                    <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                                    <h3 className="text-lg font-medium text-gray-900 mb-2">No patients found</h3>
+                                    <p className="text-gray-500">Get started by adding your first patient.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            }
+
+            // Patient Detail View
+            return (
+                <div className="min-h-screen bg-gray-50">
+                    <div className="bg-white shadow-sm border-b">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="flex justify-between items-center py-4">
+                                <div className="flex items-center space-x-4">
+                                    <button
+                                        onClick={() => setActivePatient(null)}
+                                        className="text-blue-600 hover:text-blue-800 flex items-center space-x-2 touch-friendly"
+                                    >
+                                        <span>← Back to Patients</span>
+                                    </button>
+                                    <div>
+                                        <h1 className="text-2xl font-bold text-gray-900">{activePatient.name}</h1>
+                                        <p className="text-sm text-gray-500">MRN: {activePatient.mrn} • {activePatient.procedure}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(activePatient.status)}`}>
+                                        {activePatient.status}
+                                    </span>
+                                    <button
+                                        onClick={() => handlePrint('preOpChecklist')}
+                                        className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 touch-friendly"
+                                    >
+                                        <Printer />
+                                        <span>Print</span>
+                                    </button>
+                                    {canPerform('edit') && (
+                                        <button
+                                            onClick={() => setIsEditing(!isEditing)}
+                                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg flex items-center space-x-2 touch-friendly"
+                                        >
+                                            {isEditing ? <Save /> : <Edit2 />}
+                                            <span>{isEditing ? 'Save' : 'Edit'}</span>
+                                        </button>
+                                    )}
+                                    <UserSwitcher />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                        <div className="mb-6">
+                            <nav className="flex space-x-8 overflow-x-auto">
+                                {['overview', 'pre-op', 'surgical', 'post-op', 'discharge', 'team'].map(tab => (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setActiveTab(tab)}
+                                        className={`pb-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap touch-friendly ${
+                                            activeTab === tab
+                                                ? 'border-blue-500 text-blue-600'
+                                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                                        }`}
+                                    >
+                                        {tab.charAt(0).toUpperCase() + tab.slice(1).replace('-', ' ')}
+                                    </button>
+                                ))}
+                            </nav>
+                        </div>
+
+                        <div className="bg-white rounded-lg shadow-sm border">
+                            <div className="p-6">
+                                {activeTab === 'overview' && (
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <div>
+                                            <h3 className="text-lg font-semibold mb-4">Patient Demographics</h3>
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                                    <input
+                                                        type="text"
+                                                        value={activePatient.name}
+                                                        onChange={(e) => updatePatient({ name: e.target.value })}
+                                                        disabled={!isEditing}
+                                                        className="w-full p-3 border rounded-md form-input touch-friendly"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                                                    <input
+                                                        type="number"
+                                                        value={activePatient.age}
+                                                        onChange={(e) => updatePatient({ age: e.target.value })}
+                                                        disabled={!isEditing}
+                                                        className="w-full p-3 border rounded-md form-input touch-friendly"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
+                                                    <input
+                                                        type="number"
+                                                        value={activePatient.demographics.weight}
+                                                        onChange={(e) => updatePatient({ 
+                                                            demographics: { ...activePatient.demographics, weight: e.target.value }
+                                                        })}
+                                                        disabled={!isEditing}
+                                                        className="w-full p-3 border rounded-md form-input touch-friendly"
+                                                        placeholder="Weight in kg"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Surgery Date</label>
+                                                    <input
+                                                        type="date"
+                                                        value={activePatient.surgeryDate}
+                                                        onChange={(e) => updatePatient({ surgeryDate: e.target.value })}
+                                                        disabled={!isEditing}
+                                                        className="w-full p-3 border rounded-md form-input touch-friendly"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Known Allergies</label>
+                                                    <input
+                                                        type="text"
+                                                        value={activePatient.demographics.allergies?.join(', ') || ''}
+                                                        onChange={(e) => updatePatient({ 
+                                                            demographics: { 
+                                                                ...activePatient.demographics, 
+                                                                allergies: e.target.value.split(',').map(a => a.trim()).filter(a => a)
+                                                            }
+                                                        })}
+                                                        disabled={!isEditing}
+                                                        className="w-full p-3 border rounded-md form-input touch-friendly"
+                                                        placeholder="Separate multiple allergies with commas"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <h3 className="text-lg font-semibold mb-4">Pre-op Progress</h3>
+                                            <div className="w-full bg-gray-200 rounded-full h-4 mb-4">
+                                                <div
+                                                    className="bg-blue-600 h-4 rounded-full transition-all duration-300 flex items-center justify-center"
+                                                    style={{ width: `${activePatient.preOpComplete}%` }}
+                                                >
+                                                    <span className="text-xs font-medium text-white">{activePatient.preOpComplete}%</span>
+                                                </div>
+                                            </div>
+                                            <p className="text-sm text-gray-600">
+                                                Pre-operative checklist completion status
+                                            </p>
+                                            
+                                            {activePatient.demographics.weight && (
+                                                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                                                    <h4 className="font-medium text-blue-900 mb-2">Quick Reference</h4>
+                                                    <div className="text-sm text-blue-700">
+                                                        <div>Patient Weight: {activePatient.demographics.weight} kg</div>
+                                                        <div>BMI: {activePatient.demographics.weight && activePatient.demographics.height ? 
+                                                            Math.round((activePatient.demographics.weight / Math.pow(activePatient.demographics.height/100, 2)) * 10) / 10 : 'N/A'}</div>
+                                                        <div>Allergies: {activePatient.demographics.allergies?.length ? 
+                                                            activePatient.demographics.allergies.join(', ') : 'None documented'}</div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeTab === 'pre-op' && <PreOpChecklistComponent />}
+
+                                {activeTab === 'surgical' && (
+                                    <div className="space-y-4">
+                                        <h3 className="text-lg font-semibold">Surgical Notes</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Surgeon</label>
+                                                <input
+                                                    type="text"
+                                                    value={activePatient.surgicalNotes.surgeon}
+                                                    onChange={(e) => updatePatient({
+                                                        surgicalNotes: { ...activePatient.surgicalNotes, surgeon: e.target.value }
+                                                    })}
+                                                    className="w-full p-3 border rounded-md form-input touch-friendly"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Assistant</label>
+                                                <input
+                                                    type="text"
+                                                    value={activePatient.surgicalNotes.assistant}
+                                                    onChange={(e) => updatePatient({
+                                                        surgicalNotes: { ...activePatient.surgicalNotes, assistant: e.target.value }
+                                                    })}
+                                                    className="w-full p-3 border rounded-md form-input touch-friendly"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Procedure Description</label>
+                                            <textarea
+                                                value={activePatient.surgicalNotes.procedure}
+                                                onChange={(e) => updatePatient({
+                                                    surgicalNotes: { ...activePatient.surgicalNotes, procedure: e.target.value }
+                                                })}
+                                                className="w-full p-3 border rounded-md form-input touch-friendly"
+                                                rows="4"
+                                            />
+                                        </div>
+                                        
+                                        <ImageGallery 
+                                            images={activePatient.surgicalNotes.images || []}
+                                            section="surgical"
+                                            title="Operative Images"
+                                        />
+                                    </div>
+                                )}
+
+                                {activeTab === 'team' && (
+                                    <div>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-lg font-semibold">Team Notes</h3>
+                                            <div className="flex items-center space-x-2">
+                                                <Users className="w-5 h-5 text-gray-400" />
+                                                <span className="text-sm text-gray-500">
+                                                    Current user: {rolePermissions[currentUser.role].name}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="mb-4">
+                                            <textarea
+                                                placeholder="Add a team note..."
+                                                className="w-full p-3 border rounded-md form-input touch-friendly"
+                                                rows="3"
+                                                onKeyPress={(e) => {
+                                                    if (e.key === 'Enter' && e.ctrlKey) {
+                                                        addTeamNote(e.target.value);
+                                                        e.target.value = '';
+                                                    }
+                                                }}
+                                            />
+                                            <p className="text-xs text-gray-500 mt-1">Press Ctrl+Enter to add note</p>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            {activePatient.teamNotes.map((note, index) => (
+                                                <div key={index} className="bg-gray-50 rounded-lg p-4">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <div className="flex items-center space-x-2">
+                                                            <span className="font-medium text-gray-900">{note.user}</span>
+                                                            {note.userRole && (
+                                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${rolePermissions[note.userRole]?.color || 'bg-gray-100 text-gray-800'}`}>
+                                                                    {rolePermissions[note.userRole]?.icon} {rolePermissions[note.userRole]?.name}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <span className="text-sm text-gray-500">{note.time}</span>
+                                                    </div>
+                                                    <p className="text-gray-700">{note.note}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Print Modal */}
+                    {printModal.show && (
+                        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4 modal-overlay">
+                            <div className="bg-white rounded-lg max-w-4xl max-h-full overflow-hidden">
+                                <div className="flex items-center justify-between p-4 border-b">
+                                    <h3 className="text-lg font-semibold text-gray-900">Print Preview</h3>
+                                    <button
+                                        onClick={() => setPrintModal({ show: false, content: '', title: '' })}
+                                        className="p-2 hover:bg-gray-100 rounded-full touch-friendly"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                
+                                <div className="p-4 border-b bg-gray-50">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-sm text-gray-600">
+                                            Ready to print for {activePatient.name}
+                                        </div>
+                                        <div className="flex space-x-2">
+                                            <button
+                                                onClick={executePrint}
+                                                className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg touch-friendly"
+                                            >
+                                                <Printer className="w-4 h-4" />
+                                                <span>Print</span>
+                                            </button>
+                                            <button
+                                                onClick={() => setPrintModal({ show: false, content: '', title: '' })}
+                                                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg touch-friendly"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div 
+                                    className="max-h-96 overflow-y-auto p-6 bg-white"
+                                    style={{ fontSize: '0.875rem', lineHeight: '1.4' }}
+                                    dangerouslySetInnerHTML={{ __html: printModal.content }}
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        ReactDOM.render(<SurgicalPatientManager />, document.getElementById('root'));
+    </script>
+</body>
+</html>
