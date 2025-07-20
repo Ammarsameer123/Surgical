@@ -11975,8 +11975,166 @@ Notification.requestPermission();
             
             console.log('🚀 Surgical Patient Manager v2.0.0');
             console.log('📱 Development mode active');
-            console.log('🔧 Debug functions available at window.debugApp');
-        });
+            console.log('🔧 Debug functions available at                         }
+                    });
+
+                    return (
+                        <div className="bg-white border rounded-lg p-6">
+                            <h3 className="text-lg font-medium text-gray-900 mb-4">Discharge Information</h3>
+                            <div className="discharge-info">
+                                <div className="note-item full-width">
+                                    <label>Discharge Instructions:</label>
+                                    <div className="note-text">{patient.discharge?.instructions || 'Not recorded'}</div>
+                                </div>
+                                <div className="note-item full-width">
+                                    <label>Medications:</label>
+                                    <div className="note-text">{patient.discharge?.medications || 'Not recorded'}</div>
+                                </div>
+                                <div className="note-item full-width">
+                                    <label>Follow-up:</label>
+                                    <div className="note-text">{patient.discharge?.followUp || 'Not recorded'}</div>
+                                </div>
+                                <div className="note-item full-width">
+                                    <label>Activity Restrictions:</label>
+                                    <div className="note-text">{patient.discharge?.restrictions || 'Not recorded'}</div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                };
+
+                // Initialize and render the app
+                const checkAdminAccess = () => {
+                    const username = prompt('👤 Username:');
+                    const password = prompt('🔑 Password:');
+                    
+                    const credential = Object.values(ADMIN_CREDENTIALS).find(
+                        cred => cred.username === username && cred.password === password
+                    );
+                    
+                    if (credential) {
+                        alert('✅ Access granted!');
+                        return true;
+                    } else {
+                        alert('❌ Invalid credentials');
+                        return false;
+                    }
+                };
+
+                // Simple App Component
+                const SurgicalPatientManager = () => {
+                    const [isAuthenticated, setIsAuthenticated] = useState(false);
+                    const [loading, setLoading] = useState(true);
+
+                    useEffect(() => {
+                        setTimeout(() => {
+                            setLoading(false);
+                        }, 1000);
+                    }, []);
+
+                    const handleLogin = () => {
+                        if (checkAdminAccess()) {
+                            setIsAuthenticated(true);
+                        }
+                    };
+
+                    if (loading) {
+                        return (
+                            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+                                <div className="text-center">
+                                    <div className="loading-spinner mx-auto mb-4"></div>
+                                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Surgical Patient Manager</h1>
+                                    <p className="text-gray-600">Loading system...</p>
+                                </div>
+                            </div>
+                        );
+                    }
+
+                    if (!isAuthenticated) {
+                        return (
+                            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+                                <div className="max-w-md w-full mx-4">
+                                    <div className="bg-white rounded-lg shadow-xl p-8">
+                                        <div className="text-center mb-6">
+                                            <div className="w-16 h-16 bg-blue-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+                                                <span className="text-2xl text-white">🏥</span>
+                                            </div>
+                                            <h1 className="text-2xl font-bold text-gray-900 mb-2">Admin Access Required</h1>
+                                            <p className="text-gray-600">Secure access to patient management system</p>
+                                        </div>
+                                        <button
+                                            onClick={handleLogin}
+                                            className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                        >
+                                            🔑 Authenticate
+                                        </button>
+                                        <div className="mt-4 text-xs text-gray-500 text-center">
+                                            <p>Default: Ammarsameer / ghaydaa1</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    }
+
+                    return (
+                        <div className="min-h-screen bg-gray-100">
+                            <div className="bg-white shadow-sm border-b px-6 py-4">
+                                <h1 className="text-2xl font-bold text-gray-900">🏥 Surgical Patient Manager</h1>
+                                <p className="text-gray-600">Advanced Patient Care System - Supreme Edition</p>
+                            </div>
+                            <div className="p-6">
+                                <div className="bg-white rounded-lg shadow-sm border p-6">
+                                    <h2 className="text-xl font-bold text-green-600 mb-4">✅ System Online</h2>
+                                    <p className="text-gray-700 mb-4">
+                                        Welcome to the Surgical Patient Management System. 
+                                        The application has loaded successfully!
+                                    </p>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="bg-blue-50 p-4 rounded-lg">
+                                            <h3 className="font-semibold text-blue-900">👥 Patients</h3>
+                                            <p className="text-2xl font-bold text-blue-600">0</p>
+                                        </div>
+                                        <div className="bg-green-50 p-4 rounded-lg">
+                                            <h3 className="font-semibold text-green-900">✅ Completed</h3>
+                                            <p className="text-2xl font-bold text-green-600">0</p>
+                                        </div>
+                                        <div className="bg-yellow-50 p-4 rounded-lg">
+                                            <h3 className="font-semibold text-yellow-900">⏳ Pending</h3>
+                                            <p className="text-2xl font-bold text-yellow-600">0</p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-6">
+                                        <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mr-2">
+                                            + Add Patient
+                                        </button>
+                                        <button className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
+                                            📊 View Reports
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                };
+
+                // Render the app
+                const container = document.getElementById('root');
+                const root = ReactDOM.createRoot(container);
+                root.render(<SurgicalPatientManager />);
+
+            } catch (error) {
+                console.error('App Error:', error);
+                document.getElementById('root').innerHTML = `
+                    <div style="padding: 20px; text-align: center; color: red;">
+                        <h2>Application Error</h2>
+                        <p>Something went wrong: ${error.message}</p>
+                        <button onclick="location.reload()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                            Reload Page
+                        </button>
+                    </div>
+                `;
+            }
         </script>
     </body>
 </html>
