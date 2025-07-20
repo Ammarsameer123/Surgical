@@ -5389,245 +5389,284 @@
             };
 
             // Print section generators
-            const generateDemographicsSection = (patient) => `
-                <section class="print-section">
-                    <h3>Patient Demographics</h3>
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <label>Full Name:</label>
-                            <span>${patient.name}</span>
-                        </div>
-                        <div class="info-item">
-                            <label>Date of Birth:</label>
-                            <span>${patient.demographics?.dob || 'Not recorded'}</span>
-                        </div>
-                        <div class="info-item">
-                            <label>Age:</label>
-                            <span>${patient.age} years</span>
-                        </div>
-                        <div class="info-item">
-                            <label>Gender:</label>
-                            <span>${patient.demographics?.gender || 'Not recorded'}</span>
-                        </div>
-                        <div class="info-item">
-                            <label>MRN:</label>
-                            <span>${patient.mrn}</span>
-                        </div>
-                        <div class="info-item">
-                            <label>Blood Type:</label>
-                            <span>${patient.demographics?.bloodType || 'Not recorded'}</span>
-                        </div>
-                        <div class="info-item">
-                            <label>Weight:</label>
-                            <span>${patient.demographics?.weight || 'Not recorded'} kg</span>
-                        </div>
-                        <div class="info-item">
-                            <label>Height:</label>
-                            <span>${patient.demographics?.height || 'Not recorded'} cm</span>
-                        </div>
-                        <div class="info-item full-width">
-                            <label>Allergies:</label>
-                            <span>${patient.demographics?.allergies?.join(', ') || 'NKDA'}</span>
-                        </div>
-                        <div class="info-item full-width">
-                            <label>Current Medications:</label>
-                            <span>${patient.demographics?.currentMedications?.join(', ') || 'None recorded'}</span>
-                        </div>
-                    </div>
-                </section>
-            `;
+            const generateDemographicsSection = (patient) => {
+           const demographics = patient.demographics || {};
+    
+           return `
+            <section class="print-section">
+               <h3>Patient Demographics</h3>
+              <div class="info-grid">
+                   <div class="info-item">
+                       <label>Full Name:</label>
+                       <span>${patient.name || 'Not recorded'}</span>
+                       </div>
+                <div class="info-item">
+                    <label>Date of Birth:</label>
+                    <span>${demographics.dob || 'Not recorded'}</span>
+                </div>
+                <div class="info-item">
+                    <label>Age:</label>
+                    <span>${patient.age || 'Not recorded'} years</span>
+                </div>
+                <div class="info-item">
+                    <label>Gender:</label>
+                    <span>${demographics.gender || 'Not recorded'}</span>
+                </div>
+                <div class="info-item">
+                    <label>MRN:</label>
+                    <span>${patient.mrn || 'Not recorded'}</span>
+                </div>
+                <div class="info-item">
+                    <label>Blood Type:</label>
+                    <span>${demographics.bloodType || 'Not recorded'}</span>
+                </div>
+                <div class="info-item">
+                    <label>Weight:</label>
+                    <span>${demographics.weight ? demographics.weight + ' kg' : 'Not recorded'}</span>
+                </div>
+                <div class="info-item">
+                    <label>Height:</label>
+                    <span>${demographics.height ? demographics.height + ' cm' : 'Not recorded'}</span>
+                </div>
+                <div class="info-item full-width">
+                    <label>Allergies:</label>
+                    <span>${demographics.allergies ? demographics.allergies.join(', ') : 'NKDA'}</span>
+                </div>
+                <div class="info-item full-width">
+                    <label>Current Medications:</label>
+                    <span>${demographics.currentMedications ? demographics.currentMedications.join(', ') : 'None recorded'}</span>
+                </div>
+            </div>
+        </section>
+    `;
+};
 
-            const generatePreOpSection = (patient) => {
-                let checklistHTML = '';
-                
-                Object.entries(patient.preOpChecklist || {}).forEach(([key, item]) => {
-                    checklistHTML += `
-                        <tr>
-                            <td>${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</td>
-                            <td class="text-center">${item.completed ? '✓' : '✗'}</td>
-                            <td>${item.completedBy || '-'}</td>
-                            <td>${item.completedAt ? new Date(item.completedAt).toLocaleDateString() : '-'}</td>
-                            <td>${item.notes || '-'}</td>
-                        </tr>
-                    `;
-                });
+const generatePreOpSection = (patient) => {
+    const checklist = patient.preOpChecklist || {};
+    const preOpComplete = patient.preOpComplete || 0;
+    
+    let checklistHTML = '';
+    
+    Object.entries(checklist).forEach(([key, item]) => {
+        const itemName = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+        const status = item.completed ? '✓' : '✗';
+        const completedBy = item.completedBy || '-';
+        const completedAt = item.completedAt ? new Date(item.completedAt).toLocaleDateString() : '-';
+        const notes = item.notes || '-';
+        
+        checklistHTML += `
+            <tr>
+                <td>${itemName}</td>
+                <td class="text-center">${status}</td>
+                <td>${completedBy}</td>
+                <td>${completedAt}</td>
+                <td>${notes}</td>
+            </tr>
+        `;
+    });
 
-                return `
-                    <section class="print-section">
-                        <h3>Pre-Operative Checklist (${patient.preOpComplete || 0}% Complete)</h3>
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Item</th>
-                                    <th>Status</th>
-                                    <th>Completed By</th>
-                                    <th>Date</th>
-                                    <th>Notes</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${checklistHTML}
-                            </tbody>
-                        </table>
-                    </section>
-                `;
-            };
+    return `
+        <section class="print-section">
+            <h3>Pre-Operative Checklist (${preOpComplete}% Complete)</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Status</th>
+                        <th>Completed By</th>
+                        <th>Date</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${checklistHTML || '<tr><td colspan="5" class="text-center">No checklist items found</td></tr>'}
+                </tbody>
+            </table>
+        </section>
+    `;
+};
+const generateVitalsSection = (patient) => {
+    const vitalSigns = patient.vitalSigns || [];
+    
+    let vitalsHTML = '';
+    
+    vitalSigns.slice(0, 10).forEach(vital => {
+        const timestamp = new Date(vital.timestamp).toLocaleString();
+        const bp = vital.bp || '-';
+        const hr = vital.hr || '-';
+        const temp = vital.temp || '-';
+        const resp = vital.resp || '-';
+        const o2sat = vital.o2sat || '-';
+        const pain = vital.pain || '-';
+        const recordedBy = vital.recordedBy || '-';
+        
+        vitalsHTML += `
+            <tr>
+                <td>${timestamp}</td>
+                <td>${bp}</td>
+                <td>${hr}</td>
+                <td>${temp}</td>
+                <td>${resp}</td>
+                <td>${o2sat}</td>
+                <td>${pain}</td>
+                <td>${recordedBy}</td>
+            </tr>
+        `;
+    });
 
-            const generateVitalsSection = (patient) => {
-                let vitalsHTML = '';
-                
-                (patient.vitalSigns || []).slice(0, 10).forEach(vital => {
-                    vitalsHTML += `
-                        <tr>
-                            <td>${new Date(vital.timestamp).toLocaleString()}</td>
-                            <td>${vital.bp || '-'}</td>
-                            <td>${vital.hr || '-'}</td>
-                            <td>${vital.temp || '-'}</td>
-                            <td>${vital.resp || '-'}</td>
-                            <td>${vital.o2sat || '-'}</td>
-                            <td>${vital.pain || '-'}</td>
-                            <td>${vital.recordedBy || '-'}</td>
-                        </tr>
-                    `;
-                });
+    return `
+        <section class="print-section">
+            <h3>Vital Signs (Most Recent 10)</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date/Time</th>
+                        <th>BP</th>
+                        <th>HR</th>
+                        <th>Temp (°F)</th>
+                        <th>RR</th>
+                        <th>O2 Sat</th>
+                        <th>Pain</th>
+                        <th>Recorded By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${vitalsHTML || '<tr><td colspan="8" class="text-center">No vital signs recorded</td></tr>'}
+                </tbody>
+            </table>
+        </section>
+    `;
+};
 
-                return `
-                    <section class="print-section">
-                        <h3>Vital Signs (Most Recent 10)</h3>
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Date/Time</th>
-                                    <th>BP</th>
-                                    <th>HR</th>
-                                    <th>Temp (°F)</th>
-                                    <th>RR</th>
-                                    <th>O2 Sat</th>
-                                    <th>Pain</th>
-                                    <th>Recorded By</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${vitalsHTML || '<tr><td colspan="8" class="text-center">No vital signs recorded</td></tr>'}
-                            </tbody>
-                        </table>
-                    </section>
-                `;
-            };
+const generateSurgicalSection = (patient) => {
+    const surgical = patient.surgicalNotes || {};
+    
+    return `
+        <section class="print-section">
+            <h3>Surgical Notes</h3>
+            <div class="surgical-notes">
+                <div class="note-item">
+                    <label>Procedure:</label>
+                    <span>${patient.procedure || 'Not specified'}</span>
+                </div>
+                <div class="note-item">
+                    <label>Indication:</label>
+                    <span>${surgical.indication || 'Not recorded'}</span>
+                </div>
+                <div class="note-item">
+                    <label>Surgeon:</label>
+                    <span>${surgical.surgeon || 'Not recorded'}</span>
+                </div>
+                <div class="note-item">
+                    <label>Assistant:</label>
+                    <span>${surgical.assistant || 'Not recorded'}</span>
+                </div>
+                <div class="note-item">
+                    <label>Anesthesiologist:</label>
+                    <span>${surgical.anesthesiologist || 'Not recorded'}</span>
+                </div>
+                <div class="note-item">
+                    <label>Duration:</label>
+                    <span>${surgical.duration || 'Not recorded'}</span>
+                </div>
+                <div class="note-item full-width">
+                    <label>Findings:</label>
+                    <div class="note-text">${surgical.findings || 'Not recorded'}</div>
+                </div>
+                <div class="note-item full-width">
+                    <label>Complications:</label>
+                    <div class="note-text">${surgical.complications || 'None reported'}</div>
+                </div>
+            </div>
+        </section>
+    `;
+};
 
-            const generateSurgicalSection = (patient) => `
-                <section class="print-section">
-                    <h3>Surgical Notes</h3>
-                    <div class="surgical-notes">
-                        <div class="note-item">
-                            <label>Procedure:</label>
-                            <span>${patient.procedure || 'Not specified'}</span>
-                        </div>
-                        <div class="note-item">
-                            <label>Indication:</label>
-                            <span>${patient.surgicalNotes?.indication || 'Not recorded'}</span>
-                        </div>
-                        <div class="note-item">
-                            <label>Surgeon:</label>
-                            <span>${patient.surgicalNotes?.surgeon || 'Not recorded'}</span>
-                        </div>
-                        <div class="note-item">
-                            <label>Assistant:</label>
-                            <span>${patient.surgicalNotes?.assistant || 'Not recorded'}</span>
-                        </div>
-                        <div class="note-item">
-                            <label>Anesthesiologist:</label>
-                            <span>${patient.surgicalNotes?.anesthesiologist || 'Not recorded'}</span>
-                        </div>
-                        <div class="note-item">
-                            <label>Duration:</label>
-                            <span>${patient.surgicalNotes?.duration || 'Not recorded'}</span>
-                        </div>
-                        <div class="note-item full-width">
-                            <label>Findings:</label>
-                            <div class="note-text">${patient.surgicalNotes?.findings || 'Not recorded'}</div>
-                        </div>
-                        <div class="note-item full-width">
-                            <label>Complications:</label>
-                            <div class="note-text">${patient.surgicalNotes?.complications || 'None reported'}</div>
-                        </div>
-                    </div>
-                </section>
-            `;
+const generatePostOpSection = (patient) => {
+    const postOp = patient.postOpCare || {};
+    
+    return `
+        <section class="print-section">
+            <h3>Post-Operative Care</h3>
+            <div class="postop-notes">
+                <div class="note-item">
+                    <label>Pain Management:</label>
+                    <div class="note-text">${postOp.painManagement || 'Not recorded'}</div>
+                </div>
+                <div class="note-item">
+                    <label>Mobility:</label>
+                    <div class="note-text">${postOp.mobility || 'Not recorded'}</div>
+                </div>
+                <div class="note-item">
+                    <label>Diet:</label>
+                    <div class="note-text">${postOp.diet || 'Not recorded'}</div>
+                </div>
+                <div class="note-item">
+                    <label>Wound Care:</label>
+                    <div class="note-text">${postOp.wounds || 'Not recorded'}</div>
+                </div>
+            </div>
+        </section>
+    `;
+};
 
-            const generatePostOpSection = (patient) => `
-                <section class="print-section">
-                    <h3>Post-Operative Care</h3>
-                    <div class="postop-notes">
-                        <div class="note-item">
-                            <label>Pain Management:</label>
-                            <div class="note-text">${patient.postOpCare?.painManagement || 'Not recorded'}</div>
-                        </div>
-                        <div class="note-item">
-                            <label>Mobility:</label>
-                            <div class="note-text">${patient.postOpCare?.mobility || 'Not recorded'}</div>
-                        </div>
-                        <div class="note-item">
-                            <label>Diet:</label>
-                            <div class="note-text">${patient.postOpCare?.diet || 'Not recorded'}</div>
-                        </div>
-                        <div class="note-item">
-                            <label>Wound Care:</label>
-                            <div class="note-text">${patient.postOpCare?.wounds || 'Not recorded'}</div>
-                        </div>
-                    </div>
-                </section>
-            `;
+const generateDischargeSection = (patient) => {
+    const discharge = patient.discharge || {};
+    
+    return `
+        <section class="print-section">
+            <h3>Discharge Information</h3>
+            <div class="discharge-info">
+                <div class="note-item full-width">
+                    <label>Discharge Instructions:</label>
+                    <div class="note-text">${discharge.instructions || 'Not recorded'}</div>
+                </div>
+                <div class="note-item full-width">
+                    <label>Medications:</label>
+                    <div class="note-text">${discharge.medications || 'Not recorded'}</div>
+                </div>
+                <div class="note-item full-width">
+                    <label>Follow-up:</label>
+                    <div class="note-text">${discharge.followUp || 'Not recorded'}</div>
+                </div>
+                <div class="note-item full-width">
+                    <label>Activity Restrictions:</label>
+                    <div class="note-text">${discharge.restrictions || 'Not recorded'}</div>
+                </div>
+            </div>
+        </section>
+    `;
+};
+const generateNotesSection = (patient) => {
+    const teamNotes = patient.teamNotes || [];
+    
+    let notesHTML = '';
+    
+    teamNotes.slice(0, 20).forEach(note => {
+        const timestamp = new Date(note.time).toLocaleString();
+        const urgentBadge = note.priority === 'urgent' ? '<span class="urgent-badge">URGENT</span>' : '';
+        
+        notesHTML += `
+            <div class="team-note">
+                <div class="note-header">
+                    <span class="note-user">${note.user}</span>
+                    <span class="note-time">${timestamp}</span>
+                    ${urgentBadge}
+                </div>
+                <div class="note-content">${note.note}</div>
+            </div>
+        `;
+    });
 
-            const generateDischargeSection = (patient) => `
-                <section class="print-section">
-                    <h3>Discharge Information</h3>
-                    <div class="discharge-info">
-                        <div class="note-item full-width">
-                            <label>Discharge Instructions:</label>
-                            <div class="note-text">${patient.discharge?.instructions || 'Not recorded'}</div>
-                        </div>
-                        <div class="note-item full-width">
-                            <label>Medications:</label>
-                            <div class="note-text">${patient.discharge?.medications || 'Not recorded'}</div>
-                        </div>
-                        <div class="note-item full-width">
-                            <label>Follow-up:</label>
-                            <div class="note-text">${patient.discharge?.followUp || 'Not recorded'}</div>
-                        </div>
-                        <div class="note-item full-width">
-                            <label>Activity Restrictions:</label>
-                            <div class="note-text">${patient.discharge?.restrictions || 'Not recorded'}</div>
-                        </div>
-                    </div>
-                </section>
-            `;
-
-            const generateNotesSection = (patient) => {
-                let notesHTML = '';
-                
-                (patient.teamNotes || []).slice(0, 20).forEach(note => {
-                    notesHTML += `
-                        <div class="team-note">
-                            <div class="note-header">
-                                <span class="note-user">${note.user}</span>
-                                <span class="note-time">${new Date(note.time).toLocaleString()}</span>
-                                ${note.priority === 'urgent' ? '<span class="urgent-badge">URGENT</span>' : ''}
-                            </div>
-                            <div class="note-content">${note.note}</div>
-                        </div>
-                    `;
-                });
-
-                return `
-                    <section class="print-section">
-                        <h3>Team Notes</h3>
-                        <div class="team-notes">
-                            ${notesHTML || '<p>No team notes recorded</p>'}
-                        </div>
-                    </section>
-                `;
-            };
+    return `
+        <section class="print-section">
+            <h3>Team Notes</h3>
+            <div class="team-notes">
+                ${notesHTML || '<p>No team notes recorded</p>'}
+            </div>
+        </section>
+    `;
+};
 
             const getPrintStyles = () => `
                 @media print {
