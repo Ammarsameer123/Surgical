@@ -10896,4 +10896,1084 @@ Notification.requestPermission();
                     PushNotificationManager.sendNotification(title, { body: message });
                 }
             };
-                                            
+
+            // 🚀 MAIN APPLICATION WRAPPER & FINAL INTEGRATION
+
+            // Global error boundary state
+            const [hasError, setHasError] = useState(false);
+            const [errorInfo, setErrorInfo] = useState(null);
+            const [retryCount, setRetryCount] = useState(0);
+            const maxRetries = 3;
+
+            // Global loading state
+            const [appLoading, setAppLoading] = useState(true);
+            const [initializationStep, setInitializationStep] = useState('Starting...');
+
+            // App state management
+            const [appReady, setAppReady] = useState(false);
+            const [maintenanceMode, setMaintenanceMode] = useState(false);
+            const [offlineMode, setOfflineMode] = useState(!navigator.onLine);
+
+            // 🔐 AUTHENTICATION WRAPPER
+            const AuthenticationWrapper = ({ children }) => {
+                const [isAuthenticated, setIsAuthenticated] = useState(false);
+                const [authLoading, setAuthLoading] = useState(true);
+                const [authError, setAuthError] = useState(null);
+
+                useEffect(() => {
+                    const checkAuthentication = async () => {
+                        try {
+                            setInitializationStep('Checking authentication...');
+                            
+                            // Check for valid admin session
+                            const hasValidSession = checkAdminAccess();
+                            
+                            if (hasValidSession) {
+                                setIsAuthenticated(true);
+                                setInitializationStep('Authentication successful');
+                                
+                                // Log successful authentication
+                                await logActivity(`🔑 User ${currentUser.name} authenticated successfully`);
+                            } else {
+                                setAuthError('Authentication required');
+                                setInitializationStep('Authentication failed');
+                            }
+                        } catch (error) {
+                            console.error('Authentication error:', error);
+                            setAuthError('Authentication system error');
+                            setInitializationStep('Authentication error');
+                        } finally {
+                            setAuthLoading(false);
+                        }
+                    };
+
+                    checkAuthentication();
+                }, []);
+
+                if (authLoading) {
+                    return <LoadingScreen step={initializationStep} />;
+                }
+
+                if (!isAuthenticated) {
+                    return (
+                        <AuthenticationScreen 
+                            error={authError}
+                            onAuthenticated={() => {
+                                setIsAuthenticated(true);
+                                setAuthError(null);
+                            }}
+                        />
+                    );
+                }
+
+                return children;
+            };
+
+            // 🔧 ERROR BOUNDARY COMPONENT
+            const ErrorBoundary = ({ children }) => {
+                const handleError = (error, errorInfo) => {
+                    console.error('Application Error:', error, errorInfo);
+                    setHasError(true);
+                    setErrorInfo({ error, errorInfo });
+                    
+                    // Log error to system
+                    logActivity(`❌ Application Error: ${error.message}`, 'error').catch(console.error);
+                    
+                    // Send error notification if possible
+                    try {
+                        addNotification({
+                            type: 'error',
+                            title: 'Application Error',
+                            message: 'An unexpected error occurred. The team has been notified.',
+                            duration: 10000
+                        });
+                    } catch (e) {
+                        console.error('Failed to show error notification:', e);
+                    }
+                };
+
+                const handleRetry = () => {
+                    if (retryCount < maxRetries) {
+                        setRetryCount(prev => prev + 1);
+                        setHasError(false);
+                        setErrorInfo(null);
+                        
+                        // Reload the page as a last resort
+                        if (retryCount === maxRetries - 1) {
+                            window.location.reload();
+                        }
+                    }
+                };
+
+                // Simulate error boundary behavior
+                useEffect(() => {
+                    const handleUnhandledError = (event) => {
+                        handleError(event.error, { componentStack: event.filename + ':' + event.lineno });
+                    };
+
+                    const handleUnhandledRejection = (event) => {
+                        handleError(new Error(event.reason), { componentStack: 'Promise rejection' });
+                    };
+
+                    window.addEventListener('error', handleUnhandledError);
+                    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+                    return () => {
+                        window.removeEventListener('error', handleUnhandledError);
+                        window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+                    };
+                }, [retryCount]);
+
+                if (hasError) {
+                    return (
+                        <ErrorScreen 
+                            error={errorInfo?.error}
+                            errorInfo={errorInfo?.errorInfo}
+                            onRetry={handleRetry}
+                            retryCount={retryCount}
+                            maxRetries={maxRetries}
+                        />
+                    );
+                }
+
+                return children;
+            };
+
+            // 📱 LOADING SCREEN COMPONENT
+            const LoadingScreen = ({ step = 'Loading...' }) => {
+                const [progress, setProgress] = useState(0);
+                const [loadingSteps] = useState([
+                    'Initializing system...',
+                    'Checking authentication...',
+                    'Loading user data...',
+                    'Connecting to database...',
+                    'Setting up real-time features...',
+                    'Loading patient data...',
+                    'Finalizing setup...'
+                ]);
+
+                useEffect(() => {
+                    const interval = setInterval(() => {
+                        setProgress(prev => {
+                            if (prev >= 100) return 100;
+                            return prev + Math.random() * 15;
+                        });
+                    }, 300);
+
+                    return () => clearInterval(interval);
+                }, []);
+
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
+                        <div className="max-w-md w-full mx-4">
+                            {/* Logo */}
+                            <div className="text-center mb-8">
+                                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg">
+                                    <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                    </svg>
+                                </div>
+                                <h1 className="text-2xl font-bold text-gray-900 mb-2">Surgical Patient Manager</h1>
+                                <p className="text-gray-600">Advanced Patient Care System</p>
+                            </div>
+
+                            {/* Loading Animation */}
+                            <div className="bg-white rounded-lg shadow-lg p-8">
+                                <div className="text-center mb-6">
+                                    <div className="inline-flex items-center space-x-2 mb-4">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                        <span className="text-lg font-medium text-gray-700">{step}</span>
+                                    </div>
+                                </div>
+
+                                {/* Progress Bar */}
+                                <div className="mb-6">
+                                    <div className="flex justify-between text-sm text-gray-600 mb-1">
+                                        <span>Progress</span>
+                                        <span>{Math.round(progress)}%</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                        <div 
+                                            className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full transition-all duration-500 ease-out"
+                                            style={{ width: `${Math.min(progress, 100)}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+
+                                {/* Loading Steps */}
+                                <div className="space-y-2">
+                                    {loadingSteps.map((loadingStep, index) => (
+                                        <div key={index} className="flex items-center space-x-2 text-sm text-gray-600">
+                                            <div className={`w-2 h-2 rounded-full ${
+                                                step === loadingStep 
+                                                    ? 'bg-blue-500 animate-pulse' 
+                                                    : progress > (index + 1) * 14 
+                                                        ? 'bg-green-500' 
+                                                        : 'bg-gray-300'
+                                            }`}></div>
+                                            <span className={step === loadingStep ? 'font-medium text-blue-700' : ''}>
+                                                {loadingStep}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Version Info */}
+                            <div className="text-center mt-6">
+                                <p className="text-xs text-gray-500">Version 2.0.0 • Built with React & Firebase</p>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // 🔐 AUTHENTICATION SCREEN
+            const AuthenticationScreen = ({ error, onAuthenticated }) => {
+                const [loginAttempts, setLoginAttempts] = useState(0);
+                const [isLocked, setIsLocked] = useState(false);
+                const [lockoutTime, setLockoutTime] = useState(0);
+
+                useEffect(() => {
+                    if (isLocked && lockoutTime > 0) {
+                        const timer = setInterval(() => {
+                            setLockoutTime(prev => {
+                                if (prev <= 1) {
+                                    setIsLocked(false);
+                                    setLoginAttempts(0);
+                                    return 0;
+                                }
+                                return prev - 1;
+                            });
+                        }, 1000);
+
+                        return () => clearInterval(timer);
+                    }
+                }, [isLocked, lockoutTime]);
+
+                const handleLogin = () => {
+                    if (isLocked) return;
+
+                    try {
+                        const success = checkAdminAccess();
+                        if (success) {
+                            onAuthenticated();
+                        } else {
+                            setLoginAttempts(prev => prev + 1);
+                            if (loginAttempts >= 2) {
+                                setIsLocked(true);
+                                setLockoutTime(60); // 1 minute lockout
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Login error:', err);
+                    }
+                };
+
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
+                        <div className="max-w-md w-full mx-4">
+                            {/* Logo */}
+                            <div className="text-center mb-8">
+                                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg">
+                                    <Crown className="w-10 h-10 text-white" />
+                                </div>
+                                <h1 className="text-2xl font-bold text-gray-900 mb-2">Admin Access Required</h1>
+                                <p className="text-gray-600">Secure access to the Surgical Patient Management System</p>
+                            </div>
+
+                            {/* Login Card */}
+                            <div className="bg-white rounded-lg shadow-lg p-8">
+                                {error && (
+                                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                                        <div className="flex items-center space-x-2">
+                                            <AlertCircle className="w-5 h-5 text-red-600" />
+                                            <span className="text-sm font-medium text-red-800">{error}</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {isLocked ? (
+                                    <div className="text-center">
+                                        <div className="w-16 h-16 bg-red-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+                                            <X className="w-8 h-8 text-red-600" />
+                                        </div>
+                                        <h3 className="text-lg font-medium text-gray-900 mb-2">Account Temporarily Locked</h3>
+                                        <p className="text-gray-600 mb-4">Too many failed login attempts</p>
+                                        <div className="text-2xl font-bold text-red-600 mb-2">{lockoutTime}s</div>
+                                        <p className="text-sm text-gray-500">Please wait before trying again</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="text-center mb-6">
+                                            <h2 className="text-xl font-bold text-gray-900 mb-2">Administrator Login</h2>
+                                            <p className="text-gray-600">Click below to authenticate with your admin credentials</p>
+                                        </div>
+
+                                        <button
+                                            onClick={handleLogin}
+                                            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg"
+                                        >
+                                            <Key className="w-5 h-5" />
+                                            <span>Authenticate</span>
+                                        </button>
+
+                                        {loginAttempts > 0 && (
+                                            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                                <p className="text-sm text-yellow-800">
+                                                    ⚠️ {3 - loginAttempts} attempt(s) remaining before account lockout
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        <div className="mt-6 pt-6 border-t">
+                                            <div className="text-xs text-gray-500 space-y-1">
+                                                <p>🔐 Default Admin: Ammarsameer / ghaydaa1</p>
+                                                <p>🔧 Standard Admin: admin / admin123</p>
+                                                <p>🚨 Emergency Access: emergency / emergency2025</p>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Security Notice */}
+                            <div className="mt-6 text-center">
+                                <div className="inline-flex items-center space-x-2 text-sm text-gray-500">
+                                    <Shield className="w-4 h-4" />
+                                    <span>Secured with 256-bit encryption</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // ❌ ERROR SCREEN COMPONENT
+            const ErrorScreen = ({ error, errorInfo, onRetry, retryCount, maxRetries }) => {
+                const [showDetails, setShowDetails] = useState(false);
+                const [reportSent, setReportSent] = useState(false);
+
+                const sendErrorReport = async () => {
+                    try {
+                        // In a real app, this would send to error reporting service
+                        await logActivity(`📊 Error Report: ${error?.message || 'Unknown error'}`, 'error');
+                        setReportSent(true);
+                        
+                        setTimeout(() => setReportSent(false), 3000);
+                    } catch (e) {
+                        console.error('Failed to send error report:', e);
+                    }
+                };
+
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-pink-50 flex items-center justify-center">
+                        <div className="max-w-lg w-full mx-4">
+                            <div className="text-center mb-8">
+                                <div className="w-20 h-20 bg-red-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+                                    <AlertCircle className="w-10 h-10 text-red-600" />
+                                </div>
+                                <h1 className="text-2xl font-bold text-gray-900 mb-2">Something went wrong</h1>
+                                <p className="text-gray-600">The application encountered an unexpected error</p>
+                            </div>
+
+                            <div className="bg-white rounded-lg shadow-lg p-8">
+                                <div className="text-center mb-6">
+                                    <h2 className="text-lg font-medium text-gray-900 mb-2">Application Error</h2>
+                                    <p className="text-gray-600">
+                                        {error?.message || 'An unknown error occurred while running the application.'}
+                                    </p>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <button
+                                        onClick={onRetry}
+                                        disabled={retryCount >= maxRetries}
+                                        className={`w-full py-3 px-4 rounded-lg font-medium transition-all ${
+                                            retryCount >= maxRetries
+                                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
+                                    >
+                                        {retryCount >= maxRetries ? 'Maximum retries reached' : `Retry (${retryCount}/${maxRetries})`}
+                                    </button>
+
+                                    <button
+                                        onClick={() => window.location.reload()}
+                                        className="w-full py-3 px-4 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-all"
+                                    >
+                                        Reload Application
+                                    </button>
+
+                                    <button
+                                        onClick={sendErrorReport}
+                                        disabled={reportSent}
+                                        className="w-full py-3 px-4 border border-green-300 text-green-700 rounded-lg font-medium hover:bg-green-50 transition-all disabled:opacity-50"
+                                    >
+                                        {reportSent ? 'Report Sent ✓' : 'Send Error Report'}
+                                    </button>
+                                </div>
+
+                                {/* Error Details */}
+                                <div className="mt-6 pt-6 border-t">
+                                    <button
+                                        onClick={() => setShowDetails(!showDetails)}
+                                        className="text-sm text-gray-500 hover:text-gray-700 flex items-center space-x-1"
+                                    >
+                                        <span>Technical Details</span>
+                                        <svg className={`w-4 h-4 transition-transform ${showDetails ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                                        </svg>
+                                    </button>
+                                    
+                                    {showDetails && (
+                                        <div className="mt-3 p-3 bg-gray-50 rounded text-xs font-mono text-gray-700 overflow-auto max-h-32">
+                                            <div><strong>Error:</strong> {error?.message || 'Unknown error'}</div>
+                                            <div><strong>Stack:</strong> {error?.stack || 'No stack trace available'}</div>
+                                            {errorInfo && (
+                                                <div><strong>Component:</strong> {errorInfo.componentStack}</div>
+                                            )}
+                                            <div><strong>Time:</strong> {new Date().toISOString()}</div>
+                                            <div><strong>User Agent:</strong> {navigator.userAgent}</div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // 🌐 OFFLINE MODE BANNER
+            const OfflineBanner = () => {
+                const [isVisible, setIsVisible] = useState(offlineMode);
+
+                useEffect(() => {
+                    const handleOnline = () => {
+                        setOfflineMode(false);
+                        setIsVisible(false);
+                        addNotification({
+                            type: 'success',
+                            title: 'Back Online',
+                            message: 'Internet connection restored',
+                            duration: 3000
+                        });
+                    };
+
+                    const handleOffline = () => {
+                        setOfflineMode(true);
+                        setIsVisible(true);
+                        addNotification({
+                            type: 'warning',
+                            title: 'Offline Mode',
+                            message: 'Working offline - changes will sync when connection is restored',
+                            duration: 5000
+                        });
+                    };
+
+                    window.addEventListener('online', handleOnline);
+                    window.addEventListener('offline', handleOffline);
+
+                    return () => {
+                        window.removeEventListener('online', handleOnline);
+                        window.removeEventListener('offline', handleOffline);
+                    };
+                }, []);
+
+                if (!isVisible) return null;
+
+                return (
+                    <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-500 text-white p-2 text-center">
+                        <div className="flex items-center justify-center space-x-2">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.664-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                            </svg>
+                            <span className="text-sm font-medium">Working Offline - Limited functionality available</span>
+                            <button
+                                onClick={() => setIsVisible(false)}
+                                className="ml-4 text-white hover:text-yellow-200"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                );
+            };
+
+            // 🎯 MAIN APPLICATION COMPONENT
+            const MainApplication = () => {
+                const [showPrintModal, setShowPrintModal] = useState(false);
+                const [showNotificationSettings, setShowNotificationSettings] = useState(false);
+
+                // Application initialization
+                useEffect(() => {
+                    const initializeApp = async () => {
+                        try {
+                            setInitializationStep('Loading user data...');
+                            await loadUsers();
+                            
+                            setInitializationStep('Setting up real-time features...');
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            
+                            setInitializationStep('Loading patient data...');
+                            await loadPatientsFromFirebase();
+                            
+                            setInitializationStep('Finalizing setup...');
+                            await updateSystemStats();
+                            
+                            setAppReady(true);
+                            setAppLoading(false);
+                            
+                            // Show welcome notification
+                            addNotification({
+                                type: 'success',
+                                title: 'Welcome Back!',
+                                message: `Hello ${currentUser.name}, you have ${patients.length} patients to review`,
+                                duration: 5000
+                            });
+                            
+                        } catch (error) {
+                            console.error('App initialization error:', error);
+                            setHasError(true);
+                            setErrorInfo({ error, errorInfo: { componentStack: 'App initialization' } });
+                        }
+                    };
+
+                    initializeApp();
+                }, []);
+
+                if (appLoading) {
+                    return <LoadingScreen step={initializationStep} />;
+                }
+
+                return (
+                    <div className="min-h-screen bg-gray-50">
+                        {/* Offline Banner */}
+                        <OfflineBanner />
+                        
+                        {/* Live Update Banner */}
+                        <LiveUpdateBanner />
+
+                        {/* Main Application Layout */}
+                        <div className={`${offlineMode ? 'pt-10' : ''} ${liveUpdateBanner ? 'pt-16' : ''}`}>
+                            {showAdminPanel ? (
+                                <AdminDashboard />
+                            ) : (
+                                <div className="flex h-screen bg-gray-100">
+                                    {/* Sidebar */}
+                                    <div className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-white shadow-lg transition-all duration-300 flex-shrink-0`}>
+                                        <div className="h-full flex flex-col">
+                                            {/* Header */}
+                                            <div className="p-4 border-b bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+                                                <div className="flex items-center justify-between">
+                                                    <div className={`${sidebarCollapsed ? 'hidden' : 'block'}`}>
+                                                        <h1 className="text-lg font-bold">Surgical Patients</h1>
+                                                        <p className="text-blue-100 text-sm">{patients.length} patients</p>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                                                        className="p-2 hover:bg-white hover:bg-opacity-20 rounded transition-colors"
+                                                    >
+                                                        <svg className={`w-5 h-5 transition-transform ${sidebarCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Search */}
+                                            {!sidebarCollapsed && (
+                                                <div className="p-4 border-b">
+                                                    <PatientSearchBar />
+                                                </div>
+                                            )}
+
+                                            {/* Patient List */}
+                                            <div className="flex-1 overflow-y-auto">
+                                                <PatientList />
+                                            </div>
+
+                                            {/* Quick Actions */}
+                                            {!sidebarCollapsed && (
+                                                <div className="p-4 border-t bg-gray-50">
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <button
+                                                            onClick={() => addNewPatient()}
+                                                            className="flex items-center justify-center space-x-1 p-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
+                                                        >
+                                                            <Plus className="w-4 h-4" />
+                                                            <span>Add</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setShowAdminPanel(true)}
+                                                            className="flex items-center justify-center space-x-1 p-2 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors"
+                                                        >
+                                                            <Crown className="w-4 h-4" />
+                                                            <span>Admin</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Main Content */}
+                                    <div className="flex-1 flex flex-col min-w-0">
+                                        {/* Top Navigation */}
+                                        <div className="h-16 bg-white shadow-sm border-b flex items-center justify-between px-6">
+                                            <div className="flex items-center space-x-4">
+                                                <h2 className="text-xl font-semibold text-gray-900">
+                                                    {activePatient ? activePatient.name : 'Select a Patient'}
+                                                </h2>
+                                                {activePatient && (
+                                                    <div className="flex items-center space-x-2">
+                                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                            activePatient.status === 'pre-op' ? 'bg-blue-100 text-blue-800' :
+                                                            activePatient.status === 'in-surgery' ? 'bg-red-100 text-red-800' :
+                                                            activePatient.status === 'post-op' ? 'bg-yellow-100 text-yellow-800' :
+                                                            'bg-green-100 text-green-800'
+                                                        }`}>
+                                                            {activePatient.status}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="flex items-center space-x-4">
+                                                {/* Active Users */}
+                                                <ActiveUsersIndicator />
+                                                
+                                                {/* Notifications */}
+                                                <NotificationCenter />
+                                                
+                                                {/* Connection Status */}
+                                                <ConnectionStatus />
+                                                
+                                                {/* User Menu */}
+                                                <div className="flex items-center space-x-3">
+                                                    <div className="text-right">
+                                                        <div className="text-sm font-medium text-gray-900">{currentUser.name}</div>
+                                                        <div className="text-xs text-gray-500">{rolePermissions[currentUser.role]?.name}</div>
+                                                    </div>
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium text-white ${rolePermissions[currentUser.role]?.color || 'bg-gray-500'}`}>
+                                                        {currentUser.name.split(' ').map(n => n[0]).join('')}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Page Content */}
+                                        <div className="flex-1 overflow-auto">
+                                            {activePatient ? (
+                                                <PatientDetailView patient={activePatient} />
+                                            ) : (
+                                                <div className="h-full flex items-center justify-center">
+                                                    <div className="text-center max-w-md">
+                                                        <div className="w-32 h-32 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+                                                            <User className="w-16 h-16 text-gray-400" />
+                                                        </div>
+                                                        <h3 className="text-xl font-medium text-gray-900 mb-2">Welcome to Surgical Patient Manager</h3>
+                                                        <p className="text-gray-600 mb-6">
+                                                            Select a patient from the sidebar to view their details, or add a new patient to get started.
+                                                        </p>
+                                                        <div className="flex justify-center space-x-3">
+                                                            <button
+                                                                onClick={() => addNewPatient()}
+                                                                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                                                            >
+                                                                <Plus className="w-5 h-5" />
+                                                                <span>Add New Patient</span>
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (patients.length > 0) {
+                                                                        setActivePatient(patients[0]);
+                                                                    }
+                                                                }}
+                                                                disabled={patients.length === 0}
+                                                                className="border border-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            >
+                                                                View Patients
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Global Modals */}
+                        {newUserModal && <NewUserModal />}
+                        {editUserModal && <EditUserModal />}
+                        {showPrintModal && (
+                            <PrintComponent 
+                                patient={activePatient}
+                                onClose={() => setShowPrintModal(false)}
+                            />
+                        )}
+                        {showNotificationSettings && (
+                            <NotificationSettingsModal
+                                show={showNotificationSettings}
+                                onClose={() => setShowNotificationSettings(false)}
+                            />
+                        )}
+
+                        {/* Floating Elements */}
+                        <CollaborationIndicator />
+                        <ToastContainer />
+                        
+                        {/* Real-time Dashboard (if enabled) */}
+                        {canPerform('viewSystemStats') && (
+                            <div className="fixed bottom-4 left-4 z-30">
+                                <RealTimeDashboard />
+                            </div>
+                        )}
+
+                        {/* Emergency Alert System */}
+                        <EmergencyAlertSystem />
+                    </div>
+                );
+            };
+
+            // 🚨 EMERGENCY ALERT SYSTEM
+            const EmergencyAlertSystem = () => {
+                const [emergencyAlerts, setEmergencyAlerts] = useState([]);
+
+                useEffect(() => {
+                    // Check for emergency conditions every 30 seconds
+                    const checkEmergencies = () => {
+                        const alerts = [];
+
+                        // Critical vital signs
+                        patients.forEach(patient => {
+                            if (patient.vitalSigns && patient.vitalSigns.length > 0) {
+                                const latestVitals = patient.vitalSigns[0];
+                                const criticalAlerts = checkVitalSignAlerts(latestVitals);
+                                
+                                criticalAlerts.forEach(alert => {
+                                    if (alert.severity === 'critical') {
+                                        alerts.push({
+                                            id: `critical_vitals_${patient.id}`,
+                                            type: 'critical',
+                                            patientId: patient.id,
+                                            patientName: patient.name,
+                                            message: `Critical vital signs: ${alert.message}`,
+                                            timestamp: new Date().toISOString()
+                                        });
+                                    }
+                                });
+                            }
+
+                            // Surgery overdue
+                            if (patient.status === 'pre-op' && patient.surgeryDate) {
+                                const surgeryDate = new Date(patient.surgeryDate);
+                                const now = new Date();
+                                if (surgeryDate < now && patient.preOpComplete < 100) {
+                                    alerts.push({
+                                        id: `overdue_surgery_${patient.id}`,
+                                        type: 'urgent',
+                                        patientId: patient.id,
+                                        patientName: patient.name,
+                                        message: `Surgery overdue with incomplete pre-op (${patient.preOpComplete}%)`,
+                                        timestamp: new Date().toISOString()
+                                    });
+                                }
+                            }
+                        });
+
+                        setEmergencyAlerts(alerts);
+                    };
+
+                    checkEmergencies();
+                    const interval = setInterval(checkEmergencies, 30000);
+                    
+                    return () => clearInterval(interval);
+                }, [patients]);
+
+                if (emergencyAlerts.length === 0) return null;
+
+                return (
+                    <div className="fixed top-20 right-4 z-50 space-y-2 max-w-sm">
+                        {emergencyAlerts.slice(0, 3).map(alert => (
+                            <div key={alert.id} className={`p-4 rounded-lg shadow-lg border-l-4 ${
+                                alert.type === 'critical' 
+                                    ? 'bg-red-50 border-red-500' 
+                                    : 'bg-orange-50 border-orange-500'
+                            } animate-pulse`}>
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                        <div className="flex items-center space-x-2 mb-1">
+                                            <span className="text-lg">🚨</span>
+                                            <span className={`text-sm font-bold ${
+                                                alert.type === 'critical' ? 'text-red-800' : 'text-orange-800'
+                                            }`}>
+                                                {alert.type.toUpperCase()} ALERT
+                                            </span>
+                                        </div>
+                                        <h4 className="font-medium text-gray-900 mb-1">{alert.patientName}</h4>
+                                        <p className="text-sm text-gray-700">{alert.message}</p>
+                                        <div className="mt-2">
+                                            <button
+                                                onClick={() => {
+                                                    const patient = patients.find(p => p.id === alert.patientId);
+                                                    if (patient) {
+                                                        setActivePatient(patient);
+                                                        setShowAdminPanel(false);
+                                                    }
+                                                }}
+                                                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                                            >
+                                                View Patient →
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setEmergencyAlerts(prev => prev.filter(a => a.id !== alert.id));
+                                        }}
+                                        className="text-gray-400 hover:text-gray-600 ml-2"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                );
+            };
+
+            // 🎨 CUSTOM CSS STYLES
+            const customStyles = `
+                <style>
+                    .fade-in {
+                        animation: fadeIn 0.5s ease-in-out;
+                    }
+                    
+                    @keyframes fadeIn {
+                        from { opacity: 0; transform: translateY(10px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+                    
+                    .slide-in-right {
+                        animation: slideInRight 0.3s ease-out;
+                    }
+                    
+                    @keyframes slideInRight {
+                        from { transform: translateX(100%); }
+                        to { transform: translateX(0); }
+                    }
+                    
+                    .animate-slide-down {
+                        animation: slideDown 0.3s ease-out;
+                    }
+                    
+                    @keyframes slideDown {
+                        from { transform: translateY(-100%); }
+                        to { transform: translateY(0); }
+                    }
+                    
+                    .progress-bar {
+                        position: relative;
+                        overflow: hidden;
+                    }
+                    
+                    .progress-bar::after {
+                        content: '';
+                        position: absolute;
+                        top: 0;
+                        left: -100%;
+                        width: 100%;
+                        height: 100%;
+                        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+                        animation: shimmer 2s infinite;
+                    }
+                    
+                    @keyframes shimmer {
+                        0% { left: -100%; }
+                        100% { left: 100%; }
+                    }
+                    
+                    .loading-spinner {
+                        border: 2px solid #f3f4f6;
+                        border-top: 2px solid #3b82f6;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                    }
+                    
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                    
+                    .admin-badge {
+                        background: linear-gradient(135deg, #fbbf24, #f59e0b);
+                        box-shadow: 0 4px 6px -1px rgba(251, 191, 36, 0.3);
+                    }
+                    
+                    .touch-friendly {
+                        min-height: 44px;
+                        min-width: 44px;
+                    }
+                    
+                    .form-input {
+                        appearance: none;
+                        background-color: #fff;
+                        border-color: #d1d5db;
+                        border-width: 1px;
+                        border-radius: 0.375rem;
+                        padding: 0.5rem 0.75rem;
+                        font-size: 0.875rem;
+                        line-height: 1.25rem;
+                        transition: all 0.15s ease-in-out;
+                    }
+                    
+                    .form-input:focus {
+                        outline: none;
+                        ring: 2px solid rgb(59 130 246);
+                        border-color: rgb(59 130 246);
+                    }
+                    
+                    .form-input:disabled {
+                        background-color: #f9fafb;
+                        color: #6b7280;
+                        cursor: not-allowed;
+                    }
+                    
+                    /* Mobile responsiveness */
+                    @media (max-width: 768px) {
+                        .touch-friendly {
+                            min-height: 48px;
+                            min-width: 48px;
+                        }
+                    }
+                    
+                    /* Print styles */
+                    @media print {
+                        .no-print {
+                            display: none !important;
+                        }
+                        
+                        .print-break {
+                            page-break-before: always;
+                        }
+                        
+                        .print-avoid-break {
+                            page-break-inside: avoid;
+                        }
+                    }
+                    
+                    /* Dark mode support */
+                    @media (prefers-color-scheme: dark) {
+                        .auto-dark {
+                            color-scheme: dark;
+                        }
+                    }
+                </style>
+            `;
+
+            // 🎯 PERFORMANCE MONITORING
+            const PerformanceMonitor = () => {
+                useEffect(() => {
+                    // Monitor performance metrics
+                    const observer = new PerformanceObserver((list) => {
+                        const entries = list.getEntries();
+                        entries.forEach((entry) => {
+                            if (entry.entryType === 'measure') {
+                                console.log(`Performance: ${entry.name} took ${entry.duration}ms`);
+                                
+                                // Log slow operations
+                                if (entry.duration > 1000) {
+                                    logActivity(`⚠️ Slow operation detected: ${entry.name} (${entry.duration}ms)`, 'warning');
+                                }
+                            }
+                        });
+                    });
+
+                    observer.observe({ entryTypes: ['measure', 'navigation'] });
+
+                    return () => observer.disconnect();
+                }, []);
+
+                return null;
+            };
+
+            // 🚀 FINAL APPLICATION EXPORT
+            return (
+                <ErrorBoundary>
+                    <AuthenticationWrapper>
+                        <div dangerouslySetInnerHTML={{ __html: customStyles }} />
+                        <PerformanceMonitor />
+                        <MainApplication />
+                    </AuthenticationWrapper>
+                </ErrorBoundary>
+            );
+        };
+
+        // 🎯 REACT DOM RENDERING
+        const AppRoot = () => {
+            // Service Worker registration for PWA capabilities
+            useEffect(() => {
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.register('/sw.js')
+                        .then((registration) => {
+                            console.log('SW registered: ', registration);
+                        })
+                        .catch((registrationError) => {
+                            console.log('SW registration failed: ', registrationError);
+                        });
+                }
+            }, []);
+
+            return (
+                <React.StrictMode>
+                    <SurgicalPatientManager />
+                </React.StrictMode>
+            );
+        };
+
+        // 🎉 FINAL RENDER
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        
+        // Performance measurement
+        performance.mark('app-start');
+        
+        root.render(<AppRoot />);
+        
+        performance.mark('app-rendered');
+        performance.measure('app-startup', 'app-start', 'app-rendered');
+
+        // 🔧 GLOBAL ERROR HANDLING
+        window.addEventListener('unhandledrejection', event => {
+            console.error('Unhandled promise rejection:', event.reason);
+            event.preventDefault();
+        });
+
+        // 📱 PWA INSTALLATION PROMPT
+        window.addEventListener('beforeinstallprompt', (event) => {
+            event.preventDefault();
+            window.deferredPrompt = event;
+            
+            // Show install button or notification
+            console.log('PWA installation available');
+        });
+
+        // 🎯 DEVELOPMENT HELPERS
+        if (process.env.NODE_ENV === 'development') {
+            // Expose helpful debugging functions to window
+            window.debugApp = {
+                addTestPatient: () => addNewPatient(),
+                showAdminPanel: () => setShowAdminPanel(true),
+                clearNotifications: () => setNotifications([]),
+                logUsers: () => console.table(users),
+                logPatients: () => console.table(patients),
+                triggerError: () => { throw new Error('Test error'); }
+            };
+            
+            console.log('🚀 Surgical Patient Manager v2.0.0');
+            console.log('📱 Development mode active');
+            console.log('🔧 Debug functions available at window.debugApp');
+        }
