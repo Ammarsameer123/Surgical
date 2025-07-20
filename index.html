@@ -1,3 +1,4 @@
+<
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,6 +9,11 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    
     <style>
         /* Enhanced iPad and mobile optimizations */
         .touch-friendly {
@@ -74,12 +80,51 @@
             border-color: #3b82f6;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
+        
+        /* Loading indicator */
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
+        // Firebase Configuration and Setup
+        const firebaseConfig = {
+            apiKey: "AIzaSyBwHk0SDN4nx5CH9wchfywS51ZFST7d1hY",
+            authDomain: "surgical-patient-manager.firebaseapp.com",
+            projectId: "surgical-patient-manager",
+            storageBucket: "surgical-patient-manager.firebasestorage.app",
+            messagingSenderId: "1038520365935",
+            appId: "1:1038520365935:web:26e220d5e4edec4fcb2e9a"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        
+        // Enable offline persistence
+        db.enablePersistence()
+            .catch((err) => {
+                if (err.code == 'failed-precondition') {
+                    console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+                } else if (err.code == 'unimplemented') {
+                    console.warn('The current browser does not support offline persistence');
+                }
+            });
+
         const { useState, useEffect } = React;
 
         // Comprehensive icon set
@@ -96,6 +141,7 @@
         const Search = ({ className = "w-4 h-4" }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>;
         const Users = ({ className = "w-4 h-4" }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path></svg>;
         const X = ({ className = "w-4 h-4" }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>;
+        const Cloud = ({ className = "w-4 h-4" }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path></svg>;
 
         const SurgicalPatientManager = () => {
             const [patients, setPatients] = useState([]);
@@ -103,6 +149,8 @@
             const [activeTab, setActiveTab] = useState('overview');
             const [searchTerm, setSearchTerm] = useState('');
             const [isEditing, setIsEditing] = useState(false);
+            const [loading, setLoading] = useState(true);
+            const [saving, setSaving] = useState(false);
             const [currentUser, setCurrentUser] = useState({
                 name: 'Dr. Smith',
                 role: 'attending_surgeon',
@@ -110,81 +158,75 @@
             });
             const [printModal, setPrintModal] = useState({ show: false, content: '', title: '' });
 
-            // Role permissions system
-            const rolePermissions = {
-                attending_surgeon: {
-                    name: 'Attending Surgeon',
-                    icon: '👨‍⚕️',
-                    color: 'bg-blue-600 text-white',
-                    canEdit: true,
-                    canPrescribe: true,
-                    canDischarge: true
-                },
-                resident: {
-                    name: 'Resident',
-                    icon: '👩‍⚕️',
-                    color: 'bg-green-600 text-white',
-                    canEdit: true,
-                    canPrescribe: true,
-                    canDischarge: false
-                },
-                nurse: {
-                    name: 'Nurse',
-                    icon: '👩‍⚕️',
-                    color: 'bg-purple-600 text-white',
-                    canEdit: false,
-                    canPrescribe: false,
-                    canDischarge: false
+            // Firebase Database Functions
+            const savePatientToFirebase = async (patient) => {
+                try {
+                    setSaving(true);
+                    await db.collection('patients').doc(patient.id.toString()).set({
+                        ...patient,
+                        lastModified: firebase.firestore.FieldValue.serverTimestamp(),
+                        modifiedBy: currentUser.name
+                    });
+                    console.log('Patient saved to Firebase:', patient.name);
+                } catch (error) {
+                    console.error('Error saving patient:', error);
+                    alert('Error saving data. Please check your connection.');
+                } finally {
+                    setSaving(false);
                 }
             };
 
-            // Lab reference ranges
-            const labReferenceRanges = {
-                cbc: {
-                    name: 'Complete Blood Count',
-                    values: {
-                        wbc: { name: 'WBC', range: '4.5-11.0', unit: 'K/µL', critical: { low: 3.0, high: 15.0 } },
-                        hgb: { name: 'Hemoglobin', range: '12.0-16.0', unit: 'g/dL', critical: { low: 8.0, high: 18.0 } },
-                        hct: { name: 'Hematocrit', range: '36-46', unit: '%', critical: { low: 25, high: 55 } },
-                        plt: { name: 'Platelets', range: '150-450', unit: 'K/µL', critical: { low: 50, high: 1000 } }
-                    }
-                },
-                cmp: {
-                    name: 'Comprehensive Metabolic Panel',
-                    values: {
-                        glucose: { name: 'Glucose', range: '70-100', unit: 'mg/dL', critical: { low: 40, high: 400 } },
-                        bun: { name: 'BUN', range: '7-20', unit: 'mg/dL', critical: { low: 2, high: 80 } },
-                        creatinine: { name: 'Creatinine', range: '0.6-1.2', unit: 'mg/dL', critical: { low: 0.3, high: 5.0 } },
-                        sodium: { name: 'Sodium', range: '136-145', unit: 'mEq/L', critical: { low: 120, high: 160 } },
-                        potassium: { name: 'Potassium', range: '3.5-5.1', unit: 'mEq/L', critical: { low: 2.5, high: 6.5 } }
-                    }
+            const loadPatientsFromFirebase = async () => {
+                try {
+                    setLoading(true);
+                    const snapshot = await db.collection('patients').orderBy('lastModified', 'desc').get();
+                    const loadedPatients = snapshot.docs.map(doc => {
+                        const data = doc.data();
+                        return {
+                            ...data,
+                            id: parseInt(doc.id)
+                        };
+                    });
+                    setPatients(loadedPatients);
+                    console.log('Loaded patients from Firebase:', loadedPatients.length);
+                } catch (error) {
+                    console.error('Error loading patients:', error);
+                    // Load sample data if Firebase fails
+                    loadSampleData();
+                } finally {
+                    setLoading(false);
                 }
             };
 
-            // Medication database
-            const medicationDatabase = {
-                cefazolin: {
-                    name: 'Cefazolin',
-                    standardDose: 1,
-                    unit: 'g',
-                    weightBased: 15,
-                    weightUnit: 'mg/kg',
-                    maxDose: 2000,
-                    contraindications: ['penicillin allergy', 'cephalosporin allergy']
-                },
-                morphine: {
-                    name: 'Morphine',
-                    standardDose: 2,
-                    unit: 'mg',
-                    weightBased: 0.05,
-                    weightUnit: 'mg/kg',
-                    maxDose: 10,
-                    contraindications: ['morphine allergy', 'respiratory depression']
+            const deletePatientFromFirebase = async (patientId) => {
+                try {
+                    await db.collection('patients').doc(patientId.toString()).delete();
+                    console.log('Patient deleted from Firebase');
+                } catch (error) {
+                    console.error('Error deleting patient:', error);
                 }
             };
 
-            // Initialize with sample data
+            // Real-time listener for live updates
             useEffect(() => {
+                const unsubscribe = db.collection('patients').onSnapshot((snapshot) => {
+                    const updatedPatients = snapshot.docs.map(doc => {
+                        const data = doc.data();
+                        return {
+                            ...data,
+                            id: parseInt(doc.id)
+                        };
+                    });
+                    setPatients(updatedPatients);
+                    console.log('Real-time update:', updatedPatients.length, 'patients');
+                }, (error) => {
+                    console.error('Real-time listener error:', error);
+                });
+
+                return () => unsubscribe();
+            }, []);
+
+            const loadSampleData = () => {
                 const samplePatients = [
                     {
                         id: 1,
@@ -267,7 +309,87 @@
                     }
                 ];
                 setPatients(samplePatients);
+                // Save sample data to Firebase
+                samplePatients.forEach(patient => savePatientToFirebase(patient));
+            };
+
+            // Initialize app - load data on startup
+            useEffect(() => {
+                loadPatientsFromFirebase();
             }, []);
+
+            // Role permissions system
+            const rolePermissions = {
+                attending_surgeon: {
+                    name: 'Attending Surgeon',
+                    icon: '👨‍⚕️',
+                    color: 'bg-blue-600 text-white',
+                    canEdit: true,
+                    canPrescribe: true,
+                    canDischarge: true
+                },
+                resident: {
+                    name: 'Resident',
+                    icon: '👩‍⚕️',
+                    color: 'bg-green-600 text-white',
+                    canEdit: true,
+                    canPrescribe: true,
+                    canDischarge: false
+                },
+                nurse: {
+                    name: 'Nurse',
+                    icon: '👩‍⚕️',
+                    color: 'bg-purple-600 text-white',
+                    canEdit: false,
+                    canPrescribe: false,
+                    canDischarge: false
+                }
+            };
+
+            // Lab reference ranges
+            const labReferenceRanges = {
+                cbc: {
+                    name: 'Complete Blood Count',
+                    values: {
+                        wbc: { name: 'WBC', range: '4.5-11.0', unit: 'K/µL', critical: { low: 3.0, high: 15.0 } },
+                        hgb: { name: 'Hemoglobin', range: '12.0-16.0', unit: 'g/dL', critical: { low: 8.0, high: 18.0 } },
+                        hct: { name: 'Hematocrit', range: '36-46', unit: '%', critical: { low: 25, high: 55 } },
+                        plt: { name: 'Platelets', range: '150-450', unit: 'K/µL', critical: { low: 50, high: 1000 } }
+                    }
+                },
+                cmp: {
+                    name: 'Comprehensive Metabolic Panel',
+                    values: {
+                        glucose: { name: 'Glucose', range: '70-100', unit: 'mg/dL', critical: { low: 40, high: 400 } },
+                        bun: { name: 'BUN', range: '7-20', unit: 'mg/dL', critical: { low: 2, high: 80 } },
+                        creatinine: { name: 'Creatinine', range: '0.6-1.2', unit: 'mg/dL', critical: { low: 0.3, high: 5.0 } },
+                        sodium: { name: 'Sodium', range: '136-145', unit: 'mEq/L', critical: { low: 120, high: 160 } },
+                        potassium: { name: 'Potassium', range: '3.5-5.1', unit: 'mEq/L', critical: { low: 2.5, high: 6.5 } }
+                    }
+                }
+            };
+
+            // Medication database
+            const medicationDatabase = {
+                cefazolin: {
+                    name: 'Cefazolin',
+                    standardDose: 1,
+                    unit: 'g',
+                    weightBased: 15,
+                    weightUnit: 'mg/kg',
+                    maxDose: 2000,
+                    contraindications: ['penicillin allergy', 'cephalosporin allergy']
+                },
+                morphine: {
+                    name: 'Morphine',
+                    standardDose: 2,
+                    unit: 'mg',
+                    weightBased: 0.05,
+                    weightUnit: 'mg/kg',
+                    maxDose: 10,
+                    contraindications: ['morphine allergy', 'respiratory depression']
+                }
+            };
 
             // Utility functions
             const canPerform = (action) => {
@@ -309,8 +431,8 @@
                 return value < low || value > high;
             };
 
-            // Patient management functions
-            const addNewPatient = () => {
+            // Patient management functions (Updated for Firebase)
+            const addNewPatient = async () => {
                 const newPatient = {
                     id: Date.now(),
                     name: 'New Patient',
@@ -372,20 +494,22 @@
                     },
                     teamNotes: []
                 };
-                setPatients([...patients, newPatient]);
+                
+                // Save to Firebase immediately
+                await savePatientToFirebase(newPatient);
                 setActivePatient(newPatient);
                 setIsEditing(true);
             };
 
-            const updatePatient = (updatedData) => {
+            const updatePatient = async (updatedData) => {
                 const updated = { ...activePatient, ...updatedData };
-                setPatients(patients.map(p => 
-                    p.id === activePatient.id ? updated : p
-                ));
                 setActivePatient(updated);
+                
+                // Save to Firebase
+                await savePatientToFirebase(updated);
             };
 
-            const updatePreOpChecklist = (item, field, value) => {
+            const updatePreOpChecklist = async (item, field, value) => {
                 const updated = {
                     ...activePatient,
                     preOpChecklist: {
@@ -402,22 +526,22 @@
                 const completed = Object.values(updated.preOpChecklist).filter(item => item.completed).length;
                 updated.preOpComplete = Math.round((completed / total) * 100);
                 
-                updatePatient(updated);
+                await updatePatient(updated);
             };
 
-            const addTeamNote = (note) => {
+            const addTeamNote = async (note) => {
                 const newNote = {
                     user: currentUser.name,
                     userRole: currentUser.role,
                     time: new Date().toLocaleString(),
                     note: note
                 };
-                updatePatient({
+                await updatePatient({
                     teamNotes: [newNote, ...activePatient.teamNotes]
                 });
             };
 
-            const addLabResult = (labType, values) => {
+            const addLabResult = async (labType, values) => {
                 const hasCriticalValues = Object.entries(values).some(([key, value]) => 
                     isValueCritical(labType, key, value)
                 );
@@ -433,10 +557,10 @@
                     }
                 };
                 
-                updatePreOpChecklist('labResults', 'labs', updatedLabs);
+                await updatePreOpChecklist('labResults', 'labs', updatedLabs);
             };
 
-            // Print functionality
+            // Print functionality (unchanged)
             const generatePrintContent = (templateType) => {
                 const patient = activePatient;
                 const hospitalName = "Metropolitan Surgical Center";
@@ -463,7 +587,9 @@
                             <div><strong>Name:</strong> ${patient.name}</div>
                             <div><strong>MRN:</strong> ${patient.mrn}</div>
                             <div><strong>Age:</strong> ${patient.age}</div>
-                            <div><strong>DOB:</strong> ${patient.demographics.dob}</div>
+                            <div><strong>DOB:</strong> ${patient.demographics.dob}​​​​​​​​​​​​​​​​
+
+<div><strong>DOB:</strong> ${patient.demographics.dob}</div>
                             <div><strong>Weight:</strong> ${patient.demographics.weight} kg</div>
                             <div><strong>Surgery Date:</strong> ${patient.surgeryDate}</div>
                         </div>
@@ -559,7 +685,6 @@
                                 <button onclick="window.print()" style="background: #2563eb; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.375rem; cursor: pointer; margin-right: 0.5rem;">Print</button>
                                 <button onclick="window.close()" style="background: #6b7280; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.375rem; cursor: pointer;">Close</button>
                             </div>
-
                         </body>
                     </html>
                 `);
@@ -567,18 +692,18 @@
                 setPrintModal({ show: false, content: '', title: '' });
             };
 
-            // Image handling functions
+            // Image handling functions (Updated for Firebase)
             const handleImageUpload = (section, item = null) => {
                 const input = document.createElement('input');
                 input.type = 'file';
                 input.accept = 'image/*';
                 input.multiple = true;
                 
-                input.onchange = (e) => {
+                input.onchange = async (e) => {
                     const files = Array.from(e.target.files);
-                    files.forEach(file => {
+                    for (const file of files) {
                         const reader = new FileReader();
-                        reader.onload = (event) => {
+                        reader.onload = async (event) => {
                             const imageData = {
                                 id: Date.now() + Math.random(),
                                 name: file.name,
@@ -600,7 +725,7 @@
                                         }
                                     }
                                 };
-                                updatePatient(updated);
+                                await updatePatient(updated);
                             } else if (section === 'surgical') {
                                 const updated = {
                                     ...activePatient,
@@ -609,11 +734,11 @@
                                         images: [...(activePatient.surgicalNotes.images || []), imageData]
                                     }
                                 };
-                                updatePatient(updated);
+                                await updatePatient(updated);
                             }
                         };
                         reader.readAsDataURL(file);
-                    });
+                    }
                 };
                 
                 input.click();
@@ -634,6 +759,34 @@
                     case 'discharged': return 'bg-gray-100 text-gray-800';
                     default: return 'bg-gray-100 text-gray-800';
                 }
+            };
+
+            // Connection Status Component
+            const ConnectionStatus = () => {
+                const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+                useEffect(() => {
+                    const handleOnline = () => setIsOnline(true);
+                    const handleOffline = () => setIsOnline(false);
+
+                    window.addEventListener('online', handleOnline);
+                    window.addEventListener('offline', handleOffline);
+
+                    return () => {
+                        window.removeEventListener('online', handleOnline);
+                        window.removeEventListener('offline', handleOffline);
+                    };
+                }, []);
+
+                return (
+                    <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-xs ${
+                        isOnline ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                        <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                        <span>{isOnline ? 'Online' : 'Offline'}</span>
+                        {saving && <div className="loading-spinner"></div>}
+                    </div>
+                );
             };
 
             // Components
@@ -709,12 +862,12 @@
                     setShowLabModal(true);
                 };
 
-                const handleLabSubmit = () => {
+                const handleLabSubmit = async () => {
                     const numericValues = {};
                     Object.entries(labValues).forEach(([key, value]) => {
                         numericValues[key] = value ? parseFloat(value) : null;
                     });
-                    addLabResult(selectedLabType, numericValues);
+                    await addLabResult(selectedLabType, numericValues);
                     setShowLabModal(false);
                 };
 
@@ -1073,7 +1226,9 @@
                                             <span className="text-lg">{rolePermissions[member.role].icon}</span>
                                             <div>
                                                 <div className="font-medium text-gray-900">{member.name}</div>
-                                                <div className="text-sm text-gray-500">{rolePermissions[member.role].name}</div>
+                                                <div className="text-sm text-gray-500">{rolePermissions[member.role].name}​​​​​​​​​​​​​​​​
+
+<div className="text-sm text-gray-500">{rolePermissions[member.role].name}</div>
                                             </div>
                                             {currentUser.id === member.id && (
                                                 <CheckCircle className="w-4 h-4 text-blue-600 ml-auto" />
@@ -1087,6 +1242,19 @@
                 );
             };
 
+            // Loading screen while Firebase loads
+            if (loading) {
+                return (
+                    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                        <div className="text-center">
+                            <div className="loading-spinner mx-auto mb-4" style={{width: '40px', height: '40px'}}></div>
+                            <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading Patient Data</h2>
+                            <p className="text-gray-600">Syncing with cloud database...</p>
+                        </div>
+                    </div>
+                );
+            }
+
             // Main App Component
             if (!activePatient) {
                 return (
@@ -1094,7 +1262,10 @@
                         <div className="bg-white shadow-sm border-b">
                             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                                 <div className="flex justify-between items-center py-4">
-                                    <h1 className="text-2xl font-bold text-gray-900">Surgical Patient Manager</h1>
+                                    <div className="flex items-center space-x-4">
+                                        <h1 className="text-2xl font-bold text-gray-900">Surgical Patient Manager</h1>
+                                        <ConnectionStatus />
+                                    </div>
                                     <div className="flex items-center space-x-4">
                                         <button
                                             onClick={addNewPatient}
@@ -1200,6 +1371,7 @@
                                         <h1 className="text-2xl font-bold text-gray-900">{activePatient.name}</h1>
                                         <p className="text-sm text-gray-500">MRN: {activePatient.mrn} • {activePatient.procedure}</p>
                                     </div>
+                                    <ConnectionStatus />
                                 </div>
                                 <div className="flex items-center space-x-2">
                                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(activePatient.status)}`}>
