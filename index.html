@@ -127,30 +127,42 @@
 
         const { useState, useEffect } = React;
 
-        // 🔐 ADMIN PROTECTION - ADD THIS SECTION
+        
+        // 🔐 ADMIN PROTECTION - CORRECTED VERSION
         const checkAdminAccess = () => {
             const savedAuth = localStorage.getItem('surgical_admin_auth');
             if (savedAuth === 'Ammarsameer_authenticated') {
                 return true;
             }
-            
-            const username = prompt('Username:');
-            const password = prompt('Password:');
-            
+    
+            const username = prompt('👤 Username:');
+            if (username === null) return false;
+    
+            const password = prompt('🔑 Password:');
+            if (password === null) return false;
+    
             if (username === 'Ammarsameer' && password === 'ghaydaa1') {
                 localStorage.setItem('surgical_admin_auth', 'Ammarsameer_authenticated');
                 alert('✅ Welcome, Admin! You have full access.');
                 return true;
             } else {
-                alert('❌ Access Denied!');
-                document.body.innerHTML = '<div style="text-align:center;padding:50px;font-family:Arial;"><h1 style="color:#dc2626;">🔒 Access Denied</h1><p>Contact administrator for access.</p><button onclick="location.reload()" style="margin-top:20px;padding:10px 20px;background:#3b82f6;color:white;border:none;border-radius:5px;cursor:pointer;">Try Again</button></div>';
+                alert('❌ Access Denied! Invalid credentials.');
                 return false;
             }
         };
 
-        // Check access on page load
+        // Check access immediately
         if (!checkAdminAccess()) {
-            return; // Stop loading if access denied
+            document.body.innerHTML = `
+                <div style="text-align:center;padding:50px;font-family:Arial;background:#f3f4f6;min-height:100vh;display:flex;align-items:center;justify-content:center;">
+                    <div style="background:white;padding:40px;border-radius:10px;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+                        <h1 style="color:#dc2626;margin-bottom:20px;">🔒 Access Denied</h1>
+                        <p style="margin-bottom:30px;color:#666;">You need valid credentials to access this system.</p>
+                        <button onclick="location.reload()" style="padding:12px 24px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;font-size:16px;">Try Again</button>
+                    </div>
+                </div>
+            `;
+            throw new Error('Access denied - execution stopped');
         }
         // END ADMIN PROTECTION 🔐
 
